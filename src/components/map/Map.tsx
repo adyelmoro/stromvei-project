@@ -76,6 +76,9 @@ export default function Map({ stations, loading, onStationClick }: Props) {
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
+      // Force canvas to fill container after Next.js hydration settles
+      map.resize();
+
       map.addSource(SOURCE_ID, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -148,7 +151,12 @@ export default function Map({ stations, loading, onStationClick }: Props) {
 
     mapRef.current = map;
 
+    // Keep canvas in sync with container size
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(containerRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
