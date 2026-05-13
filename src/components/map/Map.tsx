@@ -76,8 +76,8 @@ export default function Map({ stations, loading, onStationClick }: Props) {
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
-      // Force canvas to fill container after Next.js hydration settles
-      map.resize();
+      // Double RAF ensures resize fires after the browser has painted the layout
+      requestAnimationFrame(() => requestAnimationFrame(() => map.resize()));
 
       map.addSource(SOURCE_ID, {
         type: "geojson",
@@ -202,8 +202,8 @@ export default function Map({ stations, loading, onStationClick }: Props) {
   }, [handleClick]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+    <div className="absolute inset-0">
+      <div ref={containerRef} className="absolute inset-0" />
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-brand-dark/60 backdrop-blur-sm pointer-events-none">
           <div className="flex items-center gap-3 text-white/70 text-sm">

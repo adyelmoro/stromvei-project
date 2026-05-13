@@ -19,7 +19,7 @@ export default function HomePage() {
   const { filtered, loading, error, isMock } = useStations(filters);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-screen h-screen overflow-hidden">
       {/* Full-screen map */}
       <Map
         stations={filtered}
