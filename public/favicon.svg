@@ -1,0 +1,51 @@
+<svg width="32" height="32" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="StrømVei">
+  <!--
+    Favicon — optimised for 16–48px render sizes.
+    At small sizes the car detail disappears; only the bolt + glass
+    squircle + glow remain, which is the strongest read at tiny scale.
+    Use a raster tool (Squoosh, ImageMagick, etc.) to export .ico from this SVG.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#0E1D42"/>
+      <stop offset="100%" stop-color="#060C1C"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#B8E8FF"/>
+      <stop offset="55%"  stop-color="#2299FF"/>
+      <stop offset="100%" stop-color="#0044CC"/>
+    </linearGradient>
+    <linearGradient id="border" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.44)"/>
+      <stop offset="100%" stop-color="rgba(0,120,255,0.35)"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#0066FF" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#0066FF" stop-opacity="0.00"/>
+    </radialGradient>
+    <filter id="boltGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Ambient glow -->
+  <ellipse cx="90" cy="90" rx="82" ry="82" fill="url(#glow)"/>
+
+  <!-- Glass squircle -->
+  <rect x="8" y="8" width="164" height="164" rx="44" fill="url(#bg)"/>
+
+  <!-- Glass border -->
+  <rect x="8" y="8" width="164" height="164" rx="44" fill="none" stroke="url(#border)" stroke-width="2"/>
+
+  <!-- Bolt glow layer -->
+  <path d="M104,22 L64,90 L84,90 L76,158 L118,78 L98,78 Z"
+        fill="#1A88FF" opacity="0.50" filter="url(#boltGlow)"/>
+
+  <!-- Bolt main -->
+  <path d="M104,22 L64,90 L84,90 L76,158 L118,78 L98,78 Z"
+        fill="url(#bolt)"/>
+</svg>
