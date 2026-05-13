@@ -1,17 +1,65 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { useState } from "react";
+import { useStations } from "@/hooks/useStations";
+import StationDrawer from "@/components/map/StationDrawer";
+import { useI18n } from "@/lib/i18n/provider";
+import { DEFAULT_FILTERS } from "@/types/filters";
+import type { NobilStation } from "@/types/nobil";
+
+// MapLibre uses browser APIs — must be loaded client-side only
+const Map = dynamic(() => import("@/components/map/Map"), { ssr: false });
+
 export default function HomePage() {
+  const { t } = useI18n();
+  const [filters] = useState(DEFAULT_FILTERS);
+  const [selectedStation, setSelectedStation] = useState<NobilStation | null>(null);
+
+  const { filtered, loading, error, isMock } = useStations(filters);
+
   return (
-    <div className="flex h-full items-center justify-center">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-white">
-          Strøm<span className="text-brand-blue font-light">Vei</span>
-        </h1>
-        <p className="text-white/50 text-sm tracking-widest uppercase">
-          Lading i Norge
-        </p>
-        <p className="text-white/30 text-xs mt-8">
-          Map loading soon...
-        </p>
+    <div className="relative w-full h-full">
+      {/* Full-screen map */}
+      <Map
+        stations={filtered}
+        loading={loading}
+        onStationClick={setSelectedStation}
+      />
+
+      {/* Station count badge */}
+      {!loading && !error && (
+        <div className="absolute top-4 left-4 z-10 bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-1.5">
+          <p className="text-white/60 text-xs">
+            {t.map.stationCount(filtered.length)}
+            {isMock && (
+              <span className="ml-2 text-yellow-400/70">· demo-data</span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {error && (
+        <div className="absolute top-4 left-4 right-4 z-10 bg-red-900/80 border border-red-500/30 text-red-200 text-sm rounded-lg px-4 py-2.5">
+          {t.system.stationsError}
+        </div>
+      )}
+
+      {/* Logo mark */}
+      <div className="absolute top-4 right-4 z-10">
+        <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
+          <span className="text-white font-bold text-sm tracking-tight">
+            Strøm<span className="text-brand-blue font-light">Vei</span>
+          </span>
+        </div>
       </div>
+
+      {/* Station detail drawer */}
+      <StationDrawer
+        station={selectedStation}
+        onClose={() => setSelectedStation(null)}
+      />
     </div>
   );
 }
