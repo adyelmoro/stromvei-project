@@ -65,7 +65,7 @@ export default function Map({ stations, loading, onStationClick }: Props) {
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: TILE_STYLE,
-      center: [15.0, 65.0], // Centre of Norway
+      center: [8.0, 62.5], // Western Norway — shows Oslo→Tromsø corridor
       zoom: 5,
       minZoom: 4,
       maxZoom: 18,
@@ -157,12 +157,18 @@ export default function Map({ stations, loading, onStationClick }: Props) {
   // Update GeoJSON data when stations change
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
 
-    const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-    if (!source) return;
+    const updateData = () => {
+      const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (source) source.setData(stationsToGeoJSON(stations));
+    };
 
-    source.setData(stationsToGeoJSON(stations));
+    if (map.isStyleLoaded()) {
+      updateData();
+    } else {
+      map.once("load", updateData);
+    }
   }, [stations]);
 
   // Wire click handler after map loads
