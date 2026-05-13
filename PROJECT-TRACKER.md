@@ -15,10 +15,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Register at nobil.no and get API key | `[ ]` | https://nobil.no — free registration, may take 1–2 days |
-| Create Supabase project | `[ ]` | supabase.com — free tier, no card required |
-| Create GitHub repo `stromvei` (public) | `[ ]` | |
-| Create Vercel account + connect GitHub | `[ ]` | |
+| Register at nobil.no and get API key | `[~]` | Registered 2026-05-13, awaiting email (1–2 working days) |
+| Create Supabase project | `[x]` | Project ID: jqvrkvggedlggftohbxb, region eu-west-1 |
+| Create GitHub repo `stromvei` (public) | `[x]` | github.com/adyelmoro/stromvei-project |
+| Create Vercel account + connect GitHub | `[x]` | Connected and auto-deploy configured |
 | Confirm domain name: StrømVei | `[x]` | Decided |
 
 ---
@@ -27,16 +27,16 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `npx create-next-app@latest stromvei` with TypeScript + Tailwind | `[ ]` | App Router, src/ dir, pnpm |
-| Configure `tsconfig.json` strict mode | `[ ]` | |
-| Install dependencies: maplibre-gl, @turf/turf, @supabase/ssr, @supabase/supabase-js | `[ ]` | No Mapbox packages needed |
-| Set up `.env.local` with all API keys | `[ ]` | |
-| Commit `.env.example` with placeholder values | `[ ]` | |
-| Configure Tailwind with brand colours (StrømVei palette) | `[ ]` | See PLAN.md for colours |
-| Set up Supabase client files (`src/lib/supabase/client.ts`, `server.ts`) | `[ ]` | |
-| Set up base layout (`src/app/layout.tsx`) with Inter font | `[ ]` | |
-| Create i18n strings files (`no.ts`, `en.ts`) with initial keys | `[ ]` | |
-| Initial Vercel deploy (blank app) | `[ ]` | Confirm CI works before writing feature code |
+| `npx create-next-app@latest stromvei` with TypeScript + Tailwind | `[x]` | Scaffolded manually (existing files in dir) — Next.js 16.2.6 |
+| Configure `tsconfig.json` strict mode | `[x]` | |
+| Install dependencies: maplibre-gl, @turf/turf, @supabase/ssr, @supabase/supabase-js | `[x]` | autoprefixer also installed |
+| Set up `.env.local` with all API keys | `[x]` | Nobil key is placeholder until email arrives |
+| Commit `.env.example` with placeholder values | `[x]` | |
+| Configure Tailwind with brand colours (StrømVei palette) | `[x]` | |
+| Set up Supabase client files (`src/lib/supabase/client.ts`, `server.ts`) | `[x]` | |
+| Set up base layout (`src/app/layout.tsx`) with Inter font | `[x]` | |
+| Create i18n strings files (`no.ts`, `en.ts`) with initial keys | `[x]` | Already existed from prior session |
+| Initial Vercel deploy (blank app) | `[ ]` | Push to GitHub first, Vercel will auto-deploy |
 
 ---
 

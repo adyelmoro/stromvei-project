@@ -141,7 +141,7 @@ const no = {
     notFoundBody: "Denne siden finnes ikke. Gå tilbake til kartet.",
     notFoundButton: "Til kartet",
   },
-} as const;
+};
 
 export default no;
 export type Translations = typeof no;
