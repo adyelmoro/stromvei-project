@@ -208,8 +208,10 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
       // Add fresh source WITH actual data baked in
       map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: route });
 
-      // Insert below the first symbol layer so route sits under labels/icons
-      const firstSymbolId = map.getStyle()?.layers?.find((l) => l.type === "symbol")?.id;
+      // Insert route below our station cluster layers (not below firstSymbolId —
+      // in the OpenFreeMap style that can land under opaque fill layers making the
+      // route invisible). CLUSTER_LAYER_ID is guaranteed to exist after map init.
+      const beforeId = map.getLayer(CLUSTER_LAYER_ID) ? CLUSTER_LAYER_ID : undefined;
 
       map.addLayer(
         {
@@ -219,7 +221,7 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
           layout: { "line-cap": "round", "line-join": "round" },
           paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.4 },
         },
-        firstSymbolId
+        beforeId
       );
 
       map.addLayer(
@@ -230,7 +232,7 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
           layout: { "line-cap": "round", "line-join": "round" },
           paint: { "line-color": "#0066FF", "line-width": 5, "line-opacity": 1.0 },
         },
-        firstSymbolId
+        beforeId
       );
 
       try {
