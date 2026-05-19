@@ -6,7 +6,6 @@ import { stationsToGeoJSON } from "@/lib/nobil";
 import type { NobilStation } from "@/types/nobil";
 
 const TILE_STYLE = "https://tiles.openfreemap.org/styles/liberty";
-
 const CLUSTER_LAYER_ID = "clusters";
 const CLUSTER_COUNT_LAYER_ID = "cluster-count";
 const UNCLUSTERED_LAYER_ID = "unclustered-point";
@@ -19,12 +18,9 @@ type Props = {
 };
 
 export default function Map({ stations, onStationClick, onMapReady }: Props) {
-  // The container div IS the map — position:fixed inset:0 so clientWidth
-  // is always exactly the viewport width, with no CSS chain in between.
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const stationsRef = useRef<NobilStation[]>([]);
-
   stationsRef.current = stations;
 
   const handleClick = useCallback(
@@ -38,11 +34,9 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
         const source = mapRef.current?.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
         if (!source || !mapRef.current) return;
         const coords = (features[0].geometry as GeoJSON.Point).coordinates as [number, number];
-        source.getClusterExpansionZoom(props.cluster_id).then((zoom) => {
-          mapRef.current?.easeTo({ center: coords, zoom: zoom ?? 12 });
-        }).catch(() => {
-          mapRef.current?.easeTo({ center: coords, zoom: 12 });
-        });
+        source.getClusterExpansionZoom(props.cluster_id)
+          .then((zoom) => { mapRef.current?.easeTo({ center: coords, zoom: zoom ?? 12 }); })
+          .catch(() => { mapRef.current?.easeTo({ center: coords, zoom: 12 }); });
         return;
       }
 
@@ -54,9 +48,21 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const container = containerRef.current;
+
+    // getBoundingClientRect() is visually accurate at any browser zoom level.
+    // clientWidth (used internally by MapLibre) can diverge from the visual size
+    // at non-100% zoom, leaving a black column in the tile grid.
+    // We pin explicit px dimensions from the rect so clientWidth === visual width.
+    const applySize = () => {
+      const r = container.getBoundingClientRect();
+      container.style.width = r.width + "px";
+      container.style.height = r.height + "px";
+    };
+    applySize();
 
     const map = new maplibregl.Map({
-      container: containerRef.current,
+      container,
       style: TILE_STYLE,
       center: [10.0, 62.0],
       zoom: 5,
@@ -69,8 +75,24 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
+      // 1. Resize immediately with pinned dimensions
+      applySize();
+      map.resize();
+
+      // 2. After first paint — catches any late CSS resolution
+      requestAnimationFrame(() => { applySize(); map.resize(); });
+
+      // 3. After 300 ms — force a full tile refresh so the grid covers
+      //    the entire canvas (fixes the black-column bug at non-100% zoom)
+      setTimeout(() => {
+        applySize();
+        map.resize();
+        map.jumpTo({ center: map.getCenter(), zoom: map.getZoom() });
+      }, 300);
+
       if (onMapReady) onMapReady(map);
 
+      // ── Sources & Layers ──────────────────────────────────────────────
       map.addSource(SOURCE_ID, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -99,11 +121,7 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
         type: "symbol",
         source: SOURCE_ID,
         filter: ["has", "point_count"],
-        layout: {
-          "text-field": "{point_count_abbreviated}",
-          "text-font": ["Open Sans Bold"],
-          "text-size": 13,
-        },
+        layout: { "text-field": "{point_count_abbreviated}", "text-font": ["Open Sans Bold"], "text-size": 13 },
         paint: { "text-color": "#ffffff" },
       });
 
@@ -134,7 +152,7 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
 
     mapRef.current = map;
 
-    const onResize = () => map.resize();
+    const onResize = () => { applySize(); map.resize(); };
     window.addEventListener("resize", onResize);
 
     return () => {
@@ -152,8 +170,7 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
       const src = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
       if (src) src.setData(stationsToGeoJSON(stations));
     };
-    if (map.isStyleLoaded()) update();
-    else map.once("load", update);
+    if (map.isStyleLoaded()) update(); else map.once("load", update);
   }, [stations]);
 
   useEffect(() => {
@@ -163,17 +180,13 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
       map.on("click", CLUSTER_LAYER_ID, handleClick);
       map.on("click", UNCLUSTERED_LAYER_ID, handleClick);
     };
-    if (map.isStyleLoaded()) wire();
-    else map.on("load", wire);
+    if (map.isStyleLoaded()) wire(); else map.on("load", wire);
     return () => {
       map.off("click", CLUSTER_LAYER_ID, handleClick);
       map.off("click", UNCLUSTERED_LAYER_ID, handleClick);
     };
   }, [handleClick]);
 
-  // This div IS the MapLibre container.
-  // position:fixed + inset:0 guarantees clientWidth === viewport width
-  // with zero CSS chain between this element and the viewport.
   return (
     <div
       ref={containerRef}
