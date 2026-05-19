@@ -76,24 +76,69 @@ export default function HomePage() {
       />
 
       {/* Top-left overlays */}
-      <div className="fixed top-4 left-4 flex flex-col gap-2" style={{ zIndex: 10 }}>
-        {/* Station count + filter toggle */}
+      {/*
+        ── MOBILE top bar ─────────────────────────────────────────────────────
+        Single flush row: [Filter] [Postnummer──flex-1] [NO|EN] [Auth] [Logo]
+        Hidden on sm+ where we use the two-column desktop layout below.
+      */}
+      <div className="sm:hidden fixed top-4 left-4 right-4 flex items-center gap-1.5" style={{ zIndex: 10 }}>
+        {/* Filter — icon + optional badge, square pill */}
+        <button
+          onClick={() => setFilterOpen((v) => !v)}
+          className={[
+            "flex-shrink-0 flex items-center justify-center gap-1 w-8 h-8 rounded-lg text-xs font-medium transition-colors backdrop-blur-sm border",
+            filterOpen || activeCount > 0
+              ? "bg-brand-blue/20 border-brand-blue/50 text-brand-blue"
+              : "bg-brand-dark/80 border-white/10 text-white/60",
+          ].join(" ")}
+          aria-label="Toggle filter panel"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          {activeCount > 0 && (
+            <span className="bg-brand-blue text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+              {activeCount}
+            </span>
+          )}
+        </button>
+
+        {/* Postcode — fills all remaining space between filter and right controls */}
+        <div className="flex-1 min-w-0">
+          <PostcodeSearch mapInstance={mapInstance} fullWidth />
+        </div>
+
+        {/* Lang toggle */}
+        <LanguageToggle />
+
+        {/* Auth */}
+        <AuthButton />
+
+        {/* Logo */}
+        <div className="flex-shrink-0 bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-lg px-2 py-1.5">
+          <span className="text-white font-bold text-xs tracking-tight whitespace-nowrap">
+            Strøm<span className="text-brand-blue font-light">Vei</span>
+          </span>
+        </div>
+      </div>
+
+      {/*
+        ── DESKTOP left column ────────────────────────────────────────────────
+        Stacked: [count + filter] then [postcode] — hidden on mobile.
+      */}
+      <div className="hidden sm:flex fixed top-4 left-4 flex-col gap-2" style={{ zIndex: 10 }}>
         {!loading && !error && (
           <div className="flex items-center gap-2">
-            {/* Station count — hidden on mobile to save space */}
-            <div className="hidden sm:block bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-1.5">
+            <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-1.5">
               <p className="text-white/60 text-xs">
                 {t.map.stationCount(filtered.length)}
                 {isMock && <span className="ml-2 text-yellow-400/70">· demo-data</span>}
               </p>
             </div>
-
-            {/* Filter toggle — icon only on mobile, icon+label on desktop */}
             <button
               onClick={() => setFilterOpen((v) => !v)}
               className={[
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                "backdrop-blur-sm border",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors backdrop-blur-sm border",
                 filterOpen || activeCount > 0
                   ? "bg-brand-blue/20 border-brand-blue/50 text-brand-blue"
                   : "bg-brand-dark/80 border-white/10 text-white/60 hover:text-white/80 hover:border-white/20",
@@ -103,8 +148,7 @@ export default function HomePage() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
               </svg>
-              {/* Label + count on desktop; count badge only on mobile */}
-              <span className="hidden sm:flex items-center gap-1">
+              <span className="flex items-center gap-1">
                 Filter
                 {activeCount > 0 && (
                   <span className="bg-brand-blue text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
@@ -112,20 +156,17 @@ export default function HomePage() {
                   </span>
                 )}
               </span>
-              {activeCount > 0 && (
-                <span className="sm:hidden bg-brand-blue text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {activeCount}
-                </span>
-              )}
             </button>
           </div>
         )}
-
         <PostcodeSearch mapInstance={mapInstance} />
       </div>
 
-      {/* Top-right: lang toggle + auth + logo */}
-      <div className="fixed top-4 right-4 flex items-center gap-2" style={{ zIndex: 10 }}>
+      {/*
+        ── DESKTOP right row ──────────────────────────────────────────────────
+        Hidden on mobile.
+      */}
+      <div className="hidden sm:flex fixed top-4 right-4 items-center gap-2" style={{ zIndex: 10 }}>
         <LanguageToggle />
         <AuthButton />
         <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
