@@ -5,6 +5,7 @@ import maplibregl from "maplibre-gl";
 
 type Props = {
   mapInstance: maplibregl.Map | null;
+  fullWidth?: boolean;
 };
 
 type NominatimResult = {
@@ -13,7 +14,7 @@ type NominatimResult = {
   display_name: string;
 };
 
-export default function PostcodeSearch({ mapInstance }: Props) {
+export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props) {
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -75,7 +76,7 @@ export default function PostcodeSearch({ mapInstance }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5 w-52">
+    <div className={`flex flex-col gap-1.5 ${fullWidth ? "w-full" : "w-52"}`}>
       <div
         className={[
           "flex items-center gap-1.5 bg-brand-dark/80 backdrop-blur-sm border rounded-lg px-2.5 py-1.5",
