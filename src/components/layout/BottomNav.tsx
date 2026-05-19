@@ -67,7 +67,7 @@ export default function BottomNav() {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 sm:hidden bg-[#0D1527]/95 backdrop-blur-md border-t border-white/10"
-      style={{ zIndex: 10 }}
+      style={{ zIndex: 35 }}
       aria-label="Navigasjon"
     >
       <div className="flex">

@@ -174,10 +174,11 @@ export default function RoutePlannerPanel({
             />
           </div>
 
-          {/* Range + Min charge (side by side) */}
-          <div className="flex gap-2">
+          {/* Range + Min charge (side by side, aligned at bottom so mismatched label
+              heights don't push the inputs out of sync) */}
+          <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1">
+              <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1 truncate">
                 {t.routePlanner.rangeLabel}
               </label>
               <input
@@ -193,7 +194,7 @@ export default function RoutePlannerPanel({
               />
             </div>
             <div className="flex-1">
-              <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1">
+              <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1 truncate">
                 {t.routePlanner.minChargeLabel}
               </label>
               <input

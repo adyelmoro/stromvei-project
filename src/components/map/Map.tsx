@@ -86,6 +86,28 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
       if (onMapReady) onMapReady(map);
 
       // ── Sources & Layers ──────────────────────────────────────────────
+      // Route source + layers added FIRST so station dots render on top.
+      // Both layers start with empty data; route useEffect swaps data in/out.
+      map.addSource(ROUTE_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: ROUTE_CASING_LAYER_ID,
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#ffffff", "line-width": 7, "line-opacity": 0.3 },
+      });
+      map.addLayer({
+        id: ROUTE_LINE_LAYER_ID,
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#0066FF", "line-width": 4, "line-opacity": 0.9 },
+      });
+
+      // Station source + layers on top of route
       map.addSource(SOURCE_ID, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -186,80 +208,33 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
     };
   }, [handleClick]);
 
-  // ── Route layer ──────────────────────────────────────────────────────────
+  // ── Route data ───────────────────────────────────────────────────────────
+  // Source and layers are always present after map init (added in map.on("load")).
+  // This effect just swaps data in/out and flies to bounds when a route is set.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const apply = () => {
-      // Ensure route source exists
-      if (!map.getSource(ROUTE_SOURCE_ID)) {
-        map.addSource(ROUTE_SOURCE_ID, {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
-      }
+    const update = () => {
+      const src = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (!src) return; // map not yet loaded — init will handle it
 
-      const src = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource;
+      src.setData(route ?? { type: "FeatureCollection", features: [] });
 
-      if (!route) {
-        // Clear route geometry
-        src.setData({ type: "FeatureCollection", features: [] });
-        return;
-      }
-
-      // Draw route — add layers if not yet present
-      if (!map.getLayer(ROUTE_CASING_LAYER_ID)) {
-        // White casing underneath — improves contrast on all basemap colours
-        map.addLayer(
-          {
-            id: ROUTE_CASING_LAYER_ID,
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-cap": "round", "line-join": "round" },
-            paint: {
-              "line-color": "#ffffff",
-              "line-width": 7,
-              "line-opacity": 0.3,
-            },
-          },
-          CLUSTER_LAYER_ID // insert below station clusters so stations render on top
-        );
-      }
-
-      if (!map.getLayer(ROUTE_LINE_LAYER_ID)) {
-        map.addLayer(
-          {
-            id: ROUTE_LINE_LAYER_ID,
-            type: "line",
-            source: ROUTE_SOURCE_ID,
-            layout: { "line-cap": "round", "line-join": "round" },
-            paint: {
-              "line-color": "#0066FF",
-              "line-width": 4,
-              "line-opacity": 0.85,
-            },
-          },
-          CLUSTER_LAYER_ID
-        );
-      }
-
-      // Update data
-      src.setData(route);
-
-      // Fit map to route bounds with padding
-      try {
-        const [minLng, minLat, maxLng, maxLat] = bbox(route);
-        map.fitBounds(
-          [[minLng, minLat], [maxLng, maxLat]],
-          { padding: 80, maxZoom: 13, duration: 900 }
-        );
-      } catch {
-        // Malformed geometry — skip fitBounds
+      if (route) {
+        try {
+          const [minLng, minLat, maxLng, maxLat] = bbox(route);
+          map.fitBounds(
+            [[minLng, minLat], [maxLng, maxLat]],
+            { padding: 80, maxZoom: 13, duration: 900 }
+          );
+        } catch {
+          // Malformed geometry — skip fitBounds
+        }
       }
     };
 
-    if (map.isStyleLoaded()) apply(); else map.once("load", apply);
+    if (map.isStyleLoaded()) update(); else map.once("load", update);
   }, [route]);
 
   return (
