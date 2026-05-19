@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/provider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { RoutePlannerProvider } from "@/lib/route-planner-context";
 import BottomNav from "@/components/layout/BottomNav";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -29,8 +30,10 @@ export default function RootLayout({
       <body className={`${inter.className} bg-brand-dark text-white h-full`}>
         <AuthProvider>
           <I18nProvider>
-            {children}
-            <BottomNav />
+            <RoutePlannerProvider>
+              {children}
+              <BottomNav />
+            </RoutePlannerProvider>
           </I18nProvider>
         </AuthProvider>
       </body>

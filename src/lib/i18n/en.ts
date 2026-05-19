@@ -17,6 +17,7 @@ const en: Translations = {
     savedShort: "Saved",
     about: "About",
     aboutShort: "About",
+    routeShort: "Route",
     languageToggle: "Norsk / English",
     signIn: "Sign in",
     myAccount: "My account",

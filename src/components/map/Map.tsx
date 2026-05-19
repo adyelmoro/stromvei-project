@@ -2,22 +2,28 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import maplibregl from "maplibre-gl";
+import { bbox } from "@turf/turf";
 import { stationsToGeoJSON } from "@/lib/nobil";
 import type { NobilStation } from "@/types/nobil";
+import type { Feature, LineString } from "geojson";
 
 const TILE_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const CLUSTER_LAYER_ID = "clusters";
 const CLUSTER_COUNT_LAYER_ID = "cluster-count";
 const UNCLUSTERED_LAYER_ID = "unclustered-point";
 const SOURCE_ID = "stations";
+const ROUTE_SOURCE_ID = "route";
+const ROUTE_CASING_LAYER_ID = "route-line-casing";
+const ROUTE_LINE_LAYER_ID = "route-line";
 
 type Props = {
   stations: NobilStation[];
   onStationClick: (station: NobilStation) => void;
   onMapReady?: (map: maplibregl.Map) => void;
+  route?: Feature<LineString> | null;
 };
 
-export default function Map({ stations, onStationClick, onMapReady }: Props) {
+export default function Map({ stations, onStationClick, onMapReady, route }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const stationsRef = useRef<NobilStation[]>([]);
@@ -179,6 +185,82 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
       map.off("click", UNCLUSTERED_LAYER_ID, handleClick);
     };
   }, [handleClick]);
+
+  // ── Route layer ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const apply = () => {
+      // Ensure route source exists
+      if (!map.getSource(ROUTE_SOURCE_ID)) {
+        map.addSource(ROUTE_SOURCE_ID, {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+      }
+
+      const src = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource;
+
+      if (!route) {
+        // Clear route geometry
+        src.setData({ type: "FeatureCollection", features: [] });
+        return;
+      }
+
+      // Draw route — add layers if not yet present
+      if (!map.getLayer(ROUTE_CASING_LAYER_ID)) {
+        // White casing underneath — improves contrast on all basemap colours
+        map.addLayer(
+          {
+            id: ROUTE_CASING_LAYER_ID,
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": "#ffffff",
+              "line-width": 7,
+              "line-opacity": 0.3,
+            },
+          },
+          CLUSTER_LAYER_ID // insert below station clusters so stations render on top
+        );
+      }
+
+      if (!map.getLayer(ROUTE_LINE_LAYER_ID)) {
+        map.addLayer(
+          {
+            id: ROUTE_LINE_LAYER_ID,
+            type: "line",
+            source: ROUTE_SOURCE_ID,
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+              "line-color": "#0066FF",
+              "line-width": 4,
+              "line-opacity": 0.85,
+            },
+          },
+          CLUSTER_LAYER_ID
+        );
+      }
+
+      // Update data
+      src.setData(route);
+
+      // Fit map to route bounds with padding
+      try {
+        const [minLng, minLat, maxLng, maxLat] = bbox(route);
+        map.fitBounds(
+          [[minLng, minLat], [maxLng, maxLat]],
+          { padding: 80, maxZoom: 13, duration: 900 }
+        );
+      } catch {
+        // Malformed geometry — skip fitBounds
+      }
+    };
+
+    if (map.isStyleLoaded()) apply(); else map.once("load", apply);
+  }, [route]);
 
   return (
     <div

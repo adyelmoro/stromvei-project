@@ -15,6 +15,7 @@ const no = {
     savedShort: "Lagret",
     about: "Om StrømVei",
     aboutShort: "Om",
+    routeShort: "Rute",
     languageToggle: "Norsk / English",
     signIn: "Logg inn",
     myAccount: "Min konto",

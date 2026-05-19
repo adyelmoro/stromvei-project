@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n/provider";
+import { useRoutePlanner } from "@/lib/route-planner-context";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { t } = useI18n();
+  const { toggle: onRouteToggle, hasActiveRoute: routeActive } = useRoutePlanner();
 
   const tabs = [
     {
@@ -86,6 +88,38 @@ export default function BottomNav() {
             </Link>
           );
         })}
+
+        {/* Route planner tab — button (not a page link) */}
+        <button
+          onClick={onRouteToggle}
+          className={[
+            "flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors",
+            routeActive ? "text-brand-blue" : "text-white/40 hover:text-white/60",
+          ].join(" ")}
+          aria-label={t.nav.routeShort}
+        >
+          {/* Route / directions icon */}
+          <svg
+            className="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill={routeActive ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth={routeActive ? 0 : 1.8}
+          >
+            {routeActive ? (
+              /* Filled path arrow */
+              <path d="M3 17h13l-4-4 4-4H3v8z" />
+            ) : (
+              /* Outline directions */
+              <>
+                <polyline points="3 6 9 6 9 18" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points="9 12 15 12" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points="13 10 15 12 13 14" strokeLinecap="round" strokeLinejoin="round" />
+              </>
+            )}
+          </svg>
+          <span className="text-[10px] font-medium leading-none">{t.nav.routeShort}</span>
+        </button>
       </div>
       {/* Safe area padding for phones with home indicator */}
       <div className="h-safe-area-inset-bottom" />
