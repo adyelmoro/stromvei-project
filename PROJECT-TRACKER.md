@@ -1,5 +1,5 @@
 # StrømVei — Project Tracker
-**Format:** Kanban | **Updated:** Start of build
+**Format:** Kanban | **Updated:** 2026-05-19
 
 ---
 
@@ -109,18 +109,22 @@
 
 ---
 
-## Phase 6 — Route Planner Core (Days 8–9)
+## Phase 6 — Route Planner Core (Days 8–9) ✅
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `AddressSearch` component using Nominatim | `[ ]` | Filtered to Norway (`countrycodes=no`), debounced |
-| `RoutePlannerForm` component: origin, destination, range (km), min charge % | `[ ]` | |
-| OSRM proxy route (`/api/route`) | `[ ]` | Proxies router.project-osrm.org, converts to GeoJSON |
-| Draw route on map as Mapbox line layer | `[ ]` | |
-| `RouteLayer` component | `[ ]` | |
-| Install + configure Turf.js | `[ ]` | |
-| `filterStationsAlongRoute()` function: stations within 5km of route | `[ ]` | Uses Turf `nearestPointOnLine` |
-| Web Worker for route + station geospatial calculation | `[ ]` | Prevent UI block on large routes |
+| `AddressSearch` component using Nominatim | `[x]` | Free-text search proxied through `/api/geocode`; debounced 300ms; `dropUp` prop for bottom-of-screen panels |
+| `RoutePlannerPanel` component: origin, destination, range (km), min charge % | `[x]` | Mobile bottom sheet + desktop floating card; shows result summary when route active |
+| OSRM proxy route (`/api/route`) | `[x]` | Proxies router.project-osrm.org, returns Feature<LineString> + distanceKm + durationMin; 1h cache |
+| Nominatim geocode proxy (`/api/geocode`) | `[x]` | Server-side proxy avoids Vercel CSP; handles postalcode and free-text q; 24h cache |
+| Draw route on map as MapLibre line layers | `[x]` | White casing (8px) + blue line (5px); remove/re-add on each change; idle-event fallback fixes race condition |
+| `RoutePlannerContext` for BottomNav bridge | `[x]` | Context bridges page.tsx route toggle to BottomNav in layout.tsx; exposes hasActiveRoute for nav highlight |
+| `filterStationsAlongRoute()` function: stations within 5km of route | `[x]` | Uses Turf `nearestPointOnLine`; `displayedStations` useMemo in page.tsx |
+| Turf.js bbox for fitBounds on route | `[x]` | Map flies to route bounding box with 80px padding, maxZoom 13 |
+| Route button in top nav (desktop + BottomNav mobile) | `[x]` | Desktop: button in top-left cluster; mobile: Rute tab in BottomNav |
+| Postcode/filter panels close when route panel opens | `[x]` | Mutual exclusion + onFocus callback on PostcodeSearch |
+| iOS keyboard zoom prevention on all inputs | `[x]` | `style={{ fontSize: "16px" }}` on all number/text inputs |
+| Route line fixed — idle event fallback | `[x]` | Root cause: `isStyleLoaded()` returns false during tile fetches after user interaction; `"load"` fallback never fires again; fixed with `"idle"` |
 
 ---
 
@@ -180,6 +184,13 @@
 
 | # | Description | Status | Notes |
 |---|-------------|--------|-------|
-| 1 | MapLibre canvas black vertical strip at non-100% browser zoom | `[~]` | Root cause: `clientWidth` diverges from visual width at <100% zoom; multiple CSS/JS fixes attempted. Workaround shipped: bottom sheet hides it; black strip not visible on normal 100% zoom. Deferred — not blocking Phase 3. |
+| 1 | MapLibre canvas black vertical strip at non-100% browser zoom | `[x]` | Fixed: replaced manual resize logic with ResizeObserver on container div; jumpTo after 300ms forces tile refresh |
 | 2 | Map centred on Sweden at first boot | `[x]` | Fixed: centre set to [10.0, 62.0] (south-central Norway) |
 | 3 | Postcode search cleared value after Enter | `[x]` | Fixed: removed `setValue("")` from success handler |
+| 4 | Route line never appeared on map | `[x]` | Root cause: `isStyleLoaded()` returns false during tile fetches; `map.once("load")` fallback never re-fires. Fixed: use `map.once("idle")` fallback instead. Also fixed layer ordering — `firstSymbolId` in OpenFreeMap lands below fill layers making line invisible; now uses `CLUSTER_LAYER_ID` as `beforeId`. |
+| 5 | BottomNav unresponsive on mobile when panels open | `[x]` | Fixed: BottomNav z-index raised to 35 (panels were at 20–30, covering the nav) |
+| 6 | Nominatim geocoding failed on Vercel (CSP) | `[x]` | Fixed: created `/api/geocode` server-side proxy; AddressSearch and PostcodeSearch both now use it |
+| 7 | Address suggestion dropdown off-screen (route planner at bottom) | `[x]` | Fixed: `dropUp` prop on AddressSearch switches dropdown to `bottom-full mb-1` |
+| 8 | Postcode input font changed on desktop | `[x]` | Fixed: iOS font-size workaround used responsive classes `text-base sm:text-xs` instead of overriding with inline style |
+| 9 | Number input spinners overflowing route planner panel | `[x]` | Fixed: Tailwind `[appearance:textfield]` + webkit spin button suppression |
+| 10 | Range/min-charge inputs overflowing panel on mobile | `[x]` | Fixed: changed from side-by-side flex row to stacked vertical layout |
