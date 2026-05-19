@@ -36,7 +36,7 @@
 | Set up Supabase client files (`src/lib/supabase/client.ts`, `server.ts`) | `[x]` | |
 | Set up base layout (`src/app/layout.tsx`) with Inter font | `[x]` | |
 | Create i18n strings files (`no.ts`, `en.ts`) with initial keys | `[x]` | Already existed from prior session |
-| Initial Vercel deploy (blank app) | `[ ]` | Push to GitHub first, Vercel will auto-deploy |
+| Initial Vercel deploy (blank app) | `[x]` | Live at https://stromvei-project.vercel.app |
 
 ---
 
@@ -44,16 +44,16 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Create `Map.tsx` component with MapLibre GL JS | `[ ]` | Centred on Norway, OpenFreeMap tiles |
-| Integrate Nobil API proxy route (`/api/nobil/stations`) | `[ ]` | With 15-min memory cache |
-| Parse Nobil response to `NobilStation[]` type | `[ ]` | Defensive parsing for malformed records |
-| Load stations on page mount via `useStations` hook | `[ ]` | |
-| Render stations as clustered GeoJSON source+layer | `[ ]` | NOT React markers — Mapbox cluster layer |
-| Individual marker style at high zoom | `[ ]` | Colour by speed (slow/fast/rapid) |
-| Click marker → show `StationDrawer` with full details | `[ ]` | Slide-in from right (desktop), bottom sheet (mobile) |
-| `StationDrawer` shows: name, address, connectors, speed, network, hours | `[ ]` | |
-| Connector type badges (`CCS`, `CHAdeMO`, `Type 2`, `Tesla`) | `[ ]` | |
-| Speed badges (`< 22 kW`, `22–50 kW`, `> 50 kW`) | `[ ]` | |
+| Create `Map.tsx` component with MapLibre GL JS | `[x]` | Centred on Norway, OpenFreeMap tiles |
+| Integrate Nobil API proxy route (`/api/nobil/stations`) | `[x]` | 15-min module-level cache; mock fallback when key is placeholder |
+| Parse Nobil response to `NobilStation[]` type | `[x]` | Defensive parsing in `src/lib/nobil.ts` |
+| Load stations on page mount via `useStations` hook | `[x]` | |
+| Render stations as clustered GeoJSON source+layer | `[x]` | GeoJSON cluster source, 3 layers (cluster, count, unclustered) |
+| Individual marker style at high zoom | `[x]` | Colour by speed: blue >50kW, green ≥22kW, grey <22kW |
+| Click marker → show `StationDrawer` with full details | `[x]` | Slide-in right panel desktop / bottom sheet mobile |
+| `StationDrawer` shows: name, address, connectors, speed, network, hours | `[x]` | |
+| Connector type badges (`CCS`, `CHAdeMO`, `Type 2`, `Tesla`) | `[x]` | Colour-coded badges |
+| Speed badges (`< 22 kW`, `22–50 kW`, `> 50 kW`) | `[x]` | Labels: Normallading / Hurtiglading / Lynlading |
 
 ---
 
@@ -178,4 +178,5 @@
 
 | # | Description | Status | Notes |
 |---|-------------|--------|-------|
-| — | No bugs logged yet | — | |
+| 1 | MapLibre canvas black vertical strip — canvas width wrong at init | `[~]` | Cause: dynamic import settles after `useEffect`; Fix: `position:fixed; inset:0` outer div + RAF-deferred init + staggered resize calls. Deployed, awaiting confirm. |
+| 2 | Map centred on Sweden at first boot | `[x]` | Fixed: centre changed from [15,65] to [8,62.5] then to [15,65.5] (Norway mid-point) |
