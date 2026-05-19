@@ -50,10 +50,12 @@
 | Load stations on page mount via `useStations` hook | `[x]` | |
 | Render stations as clustered GeoJSON source+layer | `[x]` | GeoJSON cluster source, 3 layers (cluster, count, unclustered) |
 | Individual marker style at high zoom | `[x]` | Colour by speed: blue >50kW, green ≥22kW, grey <22kW |
-| Click marker → show `StationDrawer` with full details | `[x]` | Slide-in right panel desktop / bottom sheet mobile |
+| Click marker → show `StationDrawer` with full details | `[x]` | Bottom sheet slides up on click — all screen sizes |
 | `StationDrawer` shows: name, address, connectors, speed, network, hours | `[x]` | |
 | Connector type badges (`CCS`, `CHAdeMO`, `Type 2`, `Tesla`) | `[x]` | Colour-coded badges |
 | Speed badges (`< 22 kW`, `22–50 kW`, `> 50 kW`) | `[x]` | Labels: Normallading / Hurtiglading / Lynlading |
+| Postcode search overlay (Nominatim geocoding) | `[x]` | 4-digit Norwegian postcode → fly to location at zoom 13 |
+| Bottom sheet layout — all screen sizes | `[x]` | Hidden on load; slides up from bottom when dot clicked; backdrop tap closes |
 
 ---
 
@@ -61,15 +63,15 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Build `FilterPanel` component (desktop sidebar) | `[ ]` | |
-| Build `FilterSheet` component (mobile bottom sheet) | `[ ]` | |
-| Filter: charging speed (slow / fast / rapid) — checkboxes | `[ ]` | |
-| Filter: connector type (CCS / CHAdeMO / Type 2 / Tesla) — checkboxes | `[ ]` | |
-| Filter: network operator — multiselect (Recharge, IONITY, Tesla, Circle K, etc.) | `[ ]` | Populate from Nobil data dynamically |
-| Wire filters to `useFilters` hook | `[ ]` | |
-| Filtered stations update map markers in real time | `[ ]` | |
-| Station count shown in filter panel ("Viser 847 stasjoner") | `[ ]` | |
-| Reset filters button | `[ ]` | |
+| Build `FilterPanel` component (desktop sidebar) | `[x]` | Responsive: floating card on sm+, bottom sheet on mobile |
+| Build `FilterSheet` component (mobile bottom sheet) | `[x]` | Merged into FilterPanel via responsive Tailwind classes |
+| Filter: charging speed (slow / fast / rapid) — checkboxes | `[x]` | Colour-coded dots: grey / green / blue |
+| Filter: connector type (CCS / CHAdeMO / Type 2 / Tesla) — checkboxes | `[x]` | Colour-coded badges |
+| Filter: network operator — multiselect (Recharge, IONITY, Tesla, Circle K, etc.) | `[x]` | Dynamic from station data, sorted A–Z |
+| Wire filters to `useFilters` hook | `[x]` | toggleSpeed / toggleConnector / toggleNetwork / clearFilters |
+| Filtered stations update map markers in real time | `[x]` | useStations(filters) re-filters on every toggle |
+| Station count shown in filter panel ("Viser 847 stasjoner") | `[x]` | Footer of FilterPanel + top-left count badge both update |
+| Reset filters button | `[x]` | Appears in panel header when activeCount > 0 |
 
 ---
 
@@ -178,5 +180,6 @@
 
 | # | Description | Status | Notes |
 |---|-------------|--------|-------|
-| 1 | MapLibre canvas black vertical strip — canvas width wrong at init | `[~]` | Cause: dynamic import settles after `useEffect`; Fix: `position:fixed; inset:0` outer div + RAF-deferred init + staggered resize calls. Deployed, awaiting confirm. |
-| 2 | Map centred on Sweden at first boot | `[x]` | Fixed: centre changed from [15,65] to [8,62.5] then to [15,65.5] (Norway mid-point) |
+| 1 | MapLibre canvas black vertical strip at non-100% browser zoom | `[~]` | Root cause: `clientWidth` diverges from visual width at <100% zoom; multiple CSS/JS fixes attempted. Workaround shipped: bottom sheet hides it; black strip not visible on normal 100% zoom. Deferred — not blocking Phase 3. |
+| 2 | Map centred on Sweden at first boot | `[x]` | Fixed: centre set to [10.0, 62.0] (south-central Norway) |
+| 3 | Postcode search cleared value after Enter | `[x]` | Fixed: removed `setValue("")` from success handler |
