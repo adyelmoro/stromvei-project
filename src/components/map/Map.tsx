@@ -173,7 +173,8 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
       const src = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
       if (src) src.setData(stationsToGeoJSON(stations));
     };
-    if (map.isStyleLoaded()) update(); else map.once("load", update);
+    if (map.isStyleLoaded()) update(); else map.once("idle", update);
+    return () => { map.off("idle", update); };
   }, [stations]);
 
   useEffect(() => {
@@ -192,7 +193,14 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
 
   // ── Route data ───────────────────────────────────────────────────────────
   // Remove-and-recreate on every route change so MapLibre reliably renders
-  // the new geometry. Using setData on an empty-init source proved unreliable.
+  // the new geometry.
+  //
+  // IMPORTANT: use "idle" as the fallback event — NOT "load".
+  // "load" fires only once at startup. If the user moves the map before
+  // submitting (causing tile fetches), isStyleLoaded() can return false while
+  // tiles are in-flight, and the "load" handler never fires again, so update()
+  // is silently skipped. "idle" fires whenever the map finishes rendering,
+  // so it always eventually runs.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -208,9 +216,8 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
       // Add fresh source WITH actual data baked in
       map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: route });
 
-      // Insert route below our station cluster layers (not below firstSymbolId —
-      // in the OpenFreeMap style that can land under opaque fill layers making the
-      // route invisible). CLUSTER_LAYER_ID is guaranteed to exist after map init.
+      // Insert route below our station cluster layers so station circles
+      // render on top of the route line.
       const beforeId = map.getLayer(CLUSTER_LAYER_ID) ? CLUSTER_LAYER_ID : undefined;
 
       map.addLayer(
@@ -246,7 +253,18 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
       }
     };
 
-    if (map.isStyleLoaded()) update(); else map.once("load", update);
+    // isStyleLoaded() can return false while tiles are fetching after user
+    // interactions — use "idle" as fallback so we always get a callback.
+    if (map.isStyleLoaded()) {
+      update();
+    } else {
+      map.once("idle", update);
+    }
+
+    return () => {
+      // If the route changes before idle fires, cancel the pending callback
+      map.off("idle", update);
+    };
   }, [route]);
 
   return (
