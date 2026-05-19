@@ -50,17 +50,6 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
     if (!containerRef.current || mapRef.current) return;
     const container = containerRef.current;
 
-    // getBoundingClientRect() is visually accurate at any browser zoom level.
-    // clientWidth (used internally by MapLibre) can diverge from the visual size
-    // at non-100% zoom, leaving a black column in the tile grid.
-    // We pin explicit px dimensions from the rect so clientWidth === visual width.
-    const applySize = () => {
-      const r = container.getBoundingClientRect();
-      container.style.width = r.width + "px";
-      container.style.height = r.height + "px";
-    };
-    applySize();
-
     const map = new maplibregl.Map({
       container,
       style: TILE_STYLE,
@@ -75,17 +64,15 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
-      // 1. Resize immediately with pinned dimensions
-      applySize();
+      // 1. Resize immediately after load
       map.resize();
 
       // 2. After first paint — catches any late CSS resolution
-      requestAnimationFrame(() => { applySize(); map.resize(); });
+      requestAnimationFrame(() => { map.resize(); });
 
-      // 3. After 300 ms — force a full tile refresh so the grid covers
-      //    the entire canvas (fixes the black-column bug at non-100% zoom)
+      // 3. After 300 ms — force a full tile refresh
+      //    jumpTo re-issues tile requests to cover the full canvas
       setTimeout(() => {
-        applySize();
         map.resize();
         map.jumpTo({ center: map.getCenter(), zoom: map.getZoom() });
       }, 300);
@@ -152,11 +139,17 @@ export default function Map({ stations, onStationClick, onMapReady }: Props) {
 
     mapRef.current = map;
 
-    const onResize = () => { applySize(); map.resize(); };
-    window.addEventListener("resize", onResize);
+    // ResizeObserver fires whenever the container changes size — covers window
+    // resize, browser zoom changes, DevTools dock/undock, and split-screen.
+    // Unlike window 'resize', it doesn't pin explicit px dimensions so the
+    // container naturally stretches to fill its inset-0 position at all times.
+    const ro = new ResizeObserver(() => {
+      if (mapRef.current) mapRef.current.resize();
+    });
+    ro.observe(container);
 
     return () => {
-      window.removeEventListener("resize", onResize);
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };

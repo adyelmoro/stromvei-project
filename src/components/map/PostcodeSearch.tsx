@@ -2,50 +2,56 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import maplibregl from "maplibre-gl";
+import { POSTCODES } from "@/data/postcodes";
 
 const NORWAY_CENTER: [number, number] = [10.0, 62.0];
 const NORWAY_ZOOM = 5;
+const MAX_RESULTS = 8;
+const MIN_DIGITS = 2; // show dropdown from 2 digits
 
 type Props = {
   mapInstance: maplibregl.Map | null;
   fullWidth?: boolean;
 };
 
-type NominatimResult = {
-  lat: string;
-  lon: string;
-  display_name: string;
-  address?: {
-    city?: string;
-    town?: string;
-    village?: string;
-    municipality?: string;
-  };
-};
-
-type Suggestion = {
-  city: string;
-  lat: number;
-  lon: number;
-};
+type PostcodeMatch = [string, string]; // [code, city]
 
 export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props) {
   const [value, setValue] = useState("");
+  const [matches, setMatches] = useState<PostcodeMatch[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
-  const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Keep a ref to mapInstance so async callbacks always see the latest value
+
+  // stable ref so async callbacks always see the latest mapInstance
   const mapRef = useRef(mapInstance);
   useEffect(() => { mapRef.current = mapInstance; }, [mapInstance]);
 
-  // ── Core lookup ──────────────────────────────────────────────────────────
-  const lookup = useCallback(async (postcode: string): Promise<Suggestion | null> => {
+  // ── Filter postcode list as user types ────────────────────────────────────
+  useEffect(() => {
+    if (value.length < MIN_DIGITS) {
+      setMatches([]);
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+      return;
+    }
+    const filtered = POSTCODES.filter(([code]) => code.startsWith(value)).slice(0, MAX_RESULTS);
+    setMatches(filtered);
+    setIsOpen(filtered.length > 0);
+    setHighlightedIndex(-1);
+  }, [value]);
+
+  // ── Nominatim coordinate lookup for a confirmed postcode ──────────────────
+  const flyToPostcode = useCallback(async (postcode: string) => {
     setStatus("loading");
     setErrorMsg("");
-    setSuggestion(null);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
 
     try {
       const url =
@@ -56,120 +62,114 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props
       const res = await fetch(url, { headers: { "Accept-Language": "no" } });
       if (!res.ok) throw new Error("network");
 
-      const data: NominatimResult[] = await res.json();
-
+      const data = await res.json() as Array<{ lat: string; lon: string }>;
       if (!data.length) {
         setErrorMsg(`Fant ikke postnummer ${postcode}`);
         setStatus("error");
-        return null;
+        return;
       }
 
-      const result = data[0];
-      const addr = result.address;
-      const city =
-        addr?.city ??
-        addr?.town ??
-        addr?.village ??
-        addr?.municipality ??
-        result.display_name.split(", ")[1] ??
-        "";
-
-      const s: Suggestion = {
-        city,
-        lat: parseFloat(result.lat),
-        lon: parseFloat(result.lon),
-      };
-      setSuggestion(s);
+      mapRef.current?.flyTo({
+        center: [parseFloat(data[0].lon), parseFloat(data[0].lat)],
+        zoom: 13,
+        speed: 1.4,
+      });
+      inputRef.current?.blur();
       setStatus("idle");
-      return s;
     } catch {
       setErrorMsg("Søk feilet. Sjekk tilkoblingen din.");
       setStatus("error");
-      return null;
     }
   }, []);
 
-  // ── Fly to a resolved suggestion ─────────────────────────────────────────
-  const flyTo = useCallback((s: Suggestion) => {
-    mapRef.current?.flyTo({
-      center: [s.lon, s.lat],
-      zoom: 13,
-      speed: 1.4,
-    });
-    setSuggestion(null);
-    inputRef.current?.blur();
-  }, []);
-
-  // ── React to value changes ────────────────────────────────────────────────
+  // ── Auto-fly when exactly 4 digits are typed ──────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (value === "") {
-      // Clear → reset map to Norway overview
       mapRef.current?.flyTo({ center: NORWAY_CENTER, zoom: NORWAY_ZOOM, speed: 1.2 });
-      setSuggestion(null);
       setStatus("idle");
       return;
     }
 
-    // 1–3 digits: just wait
-    if (value.length < 4) {
-      setSuggestion(null);
-      if (status === "error") setStatus("idle");
-      return;
+    if (value.length === 4) {
+      debounceRef.current = setTimeout(() => { void flyToPostcode(value); }, 250);
     }
 
-    // Exactly 4 digits: debounced auto-lookup
-    debounceRef.current = setTimeout(() => { void lookup(value); }, 300);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-    // `status` intentionally excluded — we only want to react to value changes
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, lookup]);
+  }, [value, flyToPostcode]);
 
-  // ── Keyboard handling ─────────────────────────────────────────────────────
-  const handleKeyDown = async (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      if (suggestion) {
-        // Already have a resolved suggestion — fly immediately
-        flyTo(suggestion);
-      } else if (value.length === 4) {
-        // User hit Enter before the debounce fired — cancel debounce, look up now
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        const s = await lookup(value);
-        if (s) flyTo(s);
+  // ── Select an item from the dropdown ──────────────────────────────────────
+  const selectMatch = useCallback((code: string) => {
+    setValue(code);
+    setIsOpen(false);
+    void flyToPostcode(code);
+  }, [flyToPostcode]);
+
+  // ── Keyboard navigation ───────────────────────────────────────────────────
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        if (!isOpen) break;
+        e.preventDefault();
+        setHighlightedIndex((i) => Math.min(i + 1, matches.length - 1));
+        break;
+      case "ArrowUp":
+        if (!isOpen) break;
+        e.preventDefault();
+        setHighlightedIndex((i) => Math.max(i - 1, 0));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (isOpen && highlightedIndex >= 0) {
+          selectMatch(matches[highlightedIndex][0]);
+        } else if (value.length === 4) {
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          void flyToPostcode(value);
+        }
+        break;
+      case "Escape":
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+        inputRef.current?.blur();
+        break;
+    }
+  }, [isOpen, matches, highlightedIndex, value, selectMatch, flyToPostcode]);
+
+  // ── Close dropdown on outside click ──────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        dropdownRef.current?.contains(e.target as Node) === false &&
+        inputRef.current?.contains(e.target as Node) === false
+      ) {
+        setIsOpen(false);
       }
-    }
-    if (e.key === "Escape") {
-      setSuggestion(null);
-      setStatus("idle");
-      inputRef.current?.blur();
-    }
-  };
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const borderClass = status === "error"
+    ? "border-red-500/50"
+    : isOpen ? "border-white/20" : "border-white/10";
 
   return (
-    <div className={`flex flex-col gap-1 ${fullWidth ? "w-full" : "w-52"}`}>
+    <div className={`relative ${fullWidth ? "w-full" : "w-52"}`}>
       {/* Input row */}
-      <div
-        className={[
-          "flex items-center gap-1.5 bg-brand-dark/80 backdrop-blur-sm border rounded-lg px-2.5 py-1.5",
-          status === "error" ? "border-red-500/50" : "border-white/10",
-        ].join(" ")}
-      >
+      <div className={`flex items-center gap-1.5 bg-brand-dark/80 backdrop-blur-sm border rounded-lg px-2.5 py-1.5 ${borderClass}`}>
         {/* Pin icon */}
-        <svg
-          className="w-3.5 h-3.5 flex-shrink-0 text-white/40"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
+        <svg className="w-3.5 h-3.5 flex-shrink-0 text-white/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
 
+        {/*
+          font-size: 16px prevents iOS Safari from auto-zooming on focus.
+          iOS zooms in when an input's font-size is < 16px; setting it to
+          exactly 16px disables that behaviour without affecting layout.
+        */}
         <input
           ref={inputRef}
           type="text"
@@ -178,16 +178,18 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props
           maxLength={4}
           placeholder="Postnummer"
           value={value}
-          onChange={(e) => {
-            setValue(e.target.value.replace(/\D/g, "").slice(0, 4));
-          }}
-          onKeyDown={(e) => { void handleKeyDown(e); }}
-          className="flex-1 bg-transparent text-white/80 text-xs placeholder-white/30 outline-none min-w-0"
+          onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          onKeyDown={handleKeyDown}
+          onFocus={() => { if (matches.length > 0) setIsOpen(true); }}
+          style={{ fontSize: "16px", lineHeight: "1.25" }}
+          className="flex-1 bg-transparent text-white/80 placeholder-white/30 outline-none min-w-0"
           aria-label="Søk etter postnummer"
+          aria-autocomplete="list"
+          aria-expanded={isOpen}
           autoComplete="off"
         />
 
-        {/* Right slot: spinner | clear button | search button */}
+        {/* Right slot: spinner | clear button | search icon */}
         {status === "loading" ? (
           <svg className="animate-spin w-3.5 h-3.5 text-white/40 flex-shrink-0" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -195,7 +197,7 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props
           </svg>
         ) : value.length > 0 ? (
           <button
-            onClick={() => setValue("")}
+            onClick={() => { setValue(""); setIsOpen(false); setStatus("idle"); }}
             className="flex-shrink-0 text-white/30 hover:text-white/70 transition-colors"
             aria-label="Tøm søk"
           >
@@ -211,30 +213,40 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props
         )}
       </div>
 
-      {/* Suggestion chip — appears after auto-lookup resolves */}
-      {suggestion && (
-        <button
-          onClick={() => flyTo(suggestion)}
-          className={[
-            "flex items-center gap-2 bg-brand-dark/90 backdrop-blur-sm",
-            "border border-brand-blue/30 rounded-lg px-2.5 py-1.5",
-            "text-left hover:border-brand-blue/60 hover:bg-brand-blue/10 transition-colors",
-            "group",
-          ].join(" ")}
+      {/* Dropdown list */}
+      {isOpen && matches.length > 0 && (
+        <div
+          ref={dropdownRef}
+          className="absolute top-full left-0 right-0 mt-1 bg-[#0D1527] border border-white/10 rounded-lg overflow-hidden shadow-2xl"
+          style={{ zIndex: 50 }}
+          role="listbox"
         >
-          <span className="text-white/40 text-xs font-mono flex-shrink-0">{value}</span>
-          <span className="text-white/80 text-xs truncate group-hover:text-white transition-colors">
-            {suggestion.city}
-          </span>
-          <svg className="w-3 h-3 text-brand-blue/60 flex-shrink-0 ml-auto group-hover:text-brand-blue transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </button>
+          {matches.map(([code, city], idx) => (
+            <button
+              key={code}
+              onClick={() => selectMatch(code)}
+              onMouseEnter={() => setHighlightedIndex(idx)}
+              className={[
+                "w-full flex items-center gap-3 px-3 py-2 text-left transition-colors",
+                idx === highlightedIndex
+                  ? "bg-brand-blue/15 text-white"
+                  : "text-white/70 hover:bg-white/5 hover:text-white",
+              ].join(" ")}
+              role="option"
+              aria-selected={idx === highlightedIndex}
+            >
+              <span className="font-mono text-xs text-brand-blue/80 flex-shrink-0 w-9 tabular-nums">
+                {code}
+              </span>
+              <span className="text-sm truncate">{city}</span>
+            </button>
+          ))}
+        </div>
       )}
 
-      {/* Error */}
+      {/* Error message */}
       {status === "error" && (
-        <p className="text-red-400/80 text-xs px-1">{errorMsg}</p>
+        <p className="text-red-400/80 text-xs px-1 mt-1">{errorMsg}</p>
       )}
     </div>
   );
