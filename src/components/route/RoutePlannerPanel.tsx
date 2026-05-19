@@ -176,41 +176,40 @@ export default function RoutePlannerPanel({
             />
           </div>
 
-          {/* Range + Min charge (side by side, aligned at bottom so mismatched label
-              heights don't push the inputs out of sync) */}
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1 truncate">
-                {t.routePlanner.rangeLabel}
-              </label>
-              <input
-                type="number"
-                inputMode="numeric"
-                min="50"
-                max="1000"
-                value={rangeKm}
-                onChange={(e) => setRangeKm(e.target.value)}
-                placeholder={t.routePlanner.rangePlaceholder}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                style={{ fontSize: "16px" }}
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1 truncate">
-                {t.routePlanner.minChargeLabel}
-              </label>
-              <input
-                type="number"
-                inputMode="numeric"
-                min="0"
-                max="80"
-                value={minChargePct}
-                onChange={(e) => setMinChargePct(e.target.value)}
-                placeholder={t.routePlanner.minChargePlaceholder}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                style={{ fontSize: "16px" }}
-              />
-            </div>
+          {/* Range */}
+          <div>
+            <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1">
+              {t.routePlanner.rangeLabel}
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="50"
+              max="1000"
+              value={rangeKm}
+              onChange={(e) => setRangeKm(e.target.value)}
+              placeholder={t.routePlanner.rangePlaceholder}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              style={{ fontSize: "16px" }}
+            />
+          </div>
+
+          {/* Min charge */}
+          <div>
+            <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1">
+              {t.routePlanner.minChargeLabel}
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="80"
+              value={minChargePct}
+              onChange={(e) => setMinChargePct(e.target.value)}
+              placeholder={t.routePlanner.minChargePlaceholder}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              style={{ fontSize: "16px" }}
+            />
           </div>
 
           {/* Range help text */}
