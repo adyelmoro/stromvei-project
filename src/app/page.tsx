@@ -5,6 +5,7 @@ import { useState, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import { useStations } from "@/hooks/useStations";
 import StationDrawer from "@/components/map/StationDrawer";
+import PostcodeSearch from "@/components/map/PostcodeSearch";
 import { useI18n } from "@/lib/i18n/provider";
 import { DEFAULT_FILTERS } from "@/types/filters";
 import type { NobilStation } from "@/types/nobil";
@@ -32,15 +33,27 @@ export default function HomePage() {
         onMapReady={handleMapReady}
       />
 
-      {/* Left sidebar (desktop) / bottom sheet (mobile) */}
-      <StationDrawer
-        station={selectedStation}
-        onClose={() => setSelectedStation(null)}
-        stationCount={filtered.length}
-        isMock={isMock}
-        loading={loading}
-        mapInstance={mapInstance}
-      />
+      {/* Top-left overlays */}
+      <div className="fixed top-4 left-4 flex flex-col gap-2" style={{ zIndex: 10 }}>
+        {!loading && !error && (
+          <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-1.5">
+            <p className="text-white/60 text-xs">
+              {t.map.stationCount(filtered.length)}
+              {isMock && <span className="ml-2 text-yellow-400/70">· demo-data</span>}
+            </p>
+          </div>
+        )}
+        <PostcodeSearch mapInstance={mapInstance} />
+      </div>
+
+      {/* Logo — top-right */}
+      <div className="fixed top-4 right-4" style={{ zIndex: 10 }}>
+        <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
+          <span className="text-white font-bold text-sm tracking-tight">
+            Strøm<span className="text-brand-blue font-light">Vei</span>
+          </span>
+        </div>
+      </div>
 
       {/* Loading overlay */}
       {loading && (
@@ -62,29 +75,17 @@ export default function HomePage() {
       {error && (
         <div
           className="fixed top-4 left-4 right-4 bg-red-900/80 border border-red-500/30 text-red-200 text-sm rounded-lg px-4 py-2.5"
-          style={{ zIndex: 30 }}
+          style={{ zIndex: 10 }}
         >
           {t.system.stationsError}
         </div>
       )}
 
-      {/* Logo — top-right, desktop only (sidebar has branding on desktop) */}
-      <div className="fixed top-4 right-4 md:block hidden" style={{ zIndex: 10 }}>
-        <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
-          <span className="text-white font-bold text-sm tracking-tight">
-            Strøm<span className="text-brand-blue font-light">Vei</span>
-          </span>
-        </div>
-      </div>
-
-      {/* Mobile logo — top-left when no drawer visible */}
-      <div className="fixed top-4 left-4 md:hidden" style={{ zIndex: 10 }}>
-        <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
-          <span className="text-white font-bold text-sm tracking-tight">
-            Strøm<span className="text-brand-blue font-light">Vei</span>
-          </span>
-        </div>
-      </div>
+      {/* Station detail — bottom sheet, hidden until dot clicked */}
+      <StationDrawer
+        station={selectedStation}
+        onClose={() => setSelectedStation(null)}
+      />
     </>
   );
 }
