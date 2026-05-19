@@ -5,9 +5,12 @@ import { useState, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import { useStations } from "@/hooks/useStations";
 import { useFilters } from "@/hooks/useFilters";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
+import { useAuth } from "@/components/auth/AuthProvider";
 import StationDrawer from "@/components/map/StationDrawer";
 import PostcodeSearch from "@/components/map/PostcodeSearch";
 import FilterPanel from "@/components/map/FilterPanel";
+import AuthButton from "@/components/auth/AuthButton";
 import { useI18n } from "@/lib/i18n/provider";
 import type { NobilStation } from "@/types/nobil";
 
@@ -15,6 +18,7 @@ const Map = dynamic(() => import("@/components/map/Map"), { ssr: false });
 
 export default function HomePage() {
   const { t } = useI18n();
+  const { user } = useAuth();
 
   // Filters
   const {
@@ -30,15 +34,32 @@ export default function HomePage() {
   // Stations
   const { stations, filtered, loading, error, isMock } = useStations(filters);
 
+  // Saved places (only active when logged in)
+  const { saveStation, removeStation, isSaved } = useSavedPlaces(user);
+
   // Map & selected station
   const [selectedStation, setSelectedStation] = useState<NobilStation | null>(null);
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
 
   const handleMapReady = useCallback((map: maplibregl.Map) => {
     setMapInstance(map);
+
+    // Fly to a station if navigated here from /saved (?lat=X&lng=Y)
+    const params = new URLSearchParams(window.location.search);
+    const lat = params.get("lat");
+    const lng = params.get("lng");
+    if (lat && lng) {
+      map.flyTo({
+        center: [parseFloat(lng), parseFloat(lat)],
+        zoom: 14,
+        speed: 1.2,
+      });
+      // Clean the URL without triggering a re-render
+      window.history.replaceState({}, "", "/");
+    }
   }, []);
 
-  // Close filter panel when a station is opened (better UX on mobile)
+  // Close filter panel when a station is opened
   const handleStationClick = useCallback((station: NobilStation) => {
     setFilterOpen(false);
     setSelectedStation(station);
@@ -77,7 +98,6 @@ export default function HomePage() {
               ].join(" ")}
               aria-label="Toggle filter panel"
             >
-              {/* Funnel icon */}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
               </svg>
@@ -98,8 +118,9 @@ export default function HomePage() {
         <PostcodeSearch mapInstance={mapInstance} />
       </div>
 
-      {/* Logo — top-right */}
-      <div className="fixed top-4 right-4" style={{ zIndex: 10 }}>
+      {/* Top-right: logo + auth */}
+      <div className="fixed top-4 right-4 flex items-center gap-2" style={{ zIndex: 10 }}>
+        <AuthButton />
         <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
           <span className="text-white font-bold text-sm tracking-tight">
             Strøm<span className="text-brand-blue font-light">Vei</span>
@@ -147,10 +168,20 @@ export default function HomePage() {
         activeCount={activeCount}
       />
 
-      {/* Station detail — bottom sheet, hidden until dot clicked */}
+      {/* Station detail — bottom sheet */}
       <StationDrawer
         station={selectedStation}
         onClose={() => setSelectedStation(null)}
+        saveState={
+          selectedStation
+            ? {
+                isLoggedIn: !!user,
+                isSaved: isSaved(selectedStation.id),
+                onSave: () => saveStation(selectedStation),
+                onRemove: () => removeStation(selectedStation.id),
+              }
+            : undefined
+        }
       />
     </>
   );
