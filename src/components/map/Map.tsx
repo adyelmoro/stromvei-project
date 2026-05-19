@@ -86,26 +86,46 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
       if (onMapReady) onMapReady(map);
 
       // ── Sources & Layers ──────────────────────────────────────────────
-      // Route source + layers added FIRST so station dots render on top.
-      // Both layers start with empty data; route useEffect swaps data in/out.
-      map.addSource(ROUTE_SOURCE_ID, {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-      map.addLayer({
-        id: ROUTE_CASING_LAYER_ID,
-        type: "line",
-        source: ROUTE_SOURCE_ID,
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#ffffff", "line-width": 7, "line-opacity": 0.3 },
-      });
-      map.addLayer({
-        id: ROUTE_LINE_LAYER_ID,
-        type: "line",
-        source: ROUTE_SOURCE_ID,
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#0066FF", "line-width": 4, "line-opacity": 0.9 },
-      });
+      // Find the first symbol (text/icon) layer in the base style so we can
+      // insert route lines BEFORE it. This ensures the route renders above
+      // terrain/roads but below place names and POI labels — exactly how
+      // navigation apps look. Station dots are added last (no beforeId) so
+      // they sit on top of everything including labels.
+      const firstSymbolId = map
+        .getStyle()
+        .layers.find((l) => l.type === "symbol")?.id;
+
+      // Route source — starts with an empty LineString; setData swaps data in/out.
+      // Using a Feature (not FeatureCollection) keeps the data type consistent
+      // with what the route useEffect writes.
+      const EMPTY_LINE = {
+        type: "Feature" as const,
+        geometry: { type: "LineString" as const, coordinates: [] as number[][] },
+        properties: {} as Record<string, unknown>,
+      };
+      map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: EMPTY_LINE });
+
+      // Insert route layers before the first symbol layer
+      map.addLayer(
+        {
+          id: ROUTE_CASING_LAYER_ID,
+          type: "line",
+          source: ROUTE_SOURCE_ID,
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.4 },
+        },
+        firstSymbolId
+      );
+      map.addLayer(
+        {
+          id: ROUTE_LINE_LAYER_ID,
+          type: "line",
+          source: ROUTE_SOURCE_ID,
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": "#0066FF", "line-width": 5, "line-opacity": 1.0 },
+        },
+        firstSymbolId
+      );
 
       // Station source + layers on top of route
       map.addSource(SOURCE_ID, {
@@ -215,11 +235,18 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
     const map = mapRef.current;
     if (!map) return;
 
+    const EMPTY_LINE = {
+      type: "Feature" as const,
+      geometry: { type: "LineString" as const, coordinates: [] as number[][] },
+      properties: {} as Record<string, unknown>,
+    };
+
     const update = () => {
       const src = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
       if (!src) return; // map not yet loaded — init will handle it
 
-      src.setData(route ?? { type: "FeatureCollection", features: [] });
+      // Always write a Feature<LineString> — consistent with initial source data
+      src.setData(route ?? EMPTY_LINE);
 
       if (route) {
         try {
