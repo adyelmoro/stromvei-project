@@ -29,29 +29,34 @@ export default function StationDrawer({ station, onClose, saveState }: Props) {
 
   return (
     <>
-      {/* Tap-outside backdrop */}
+      {/* Backdrop — mobile only; desktop card floats without dimming the map */}
       {station && (
         <div
-          className="fixed inset-0 bg-black/40"
+          className="fixed inset-0 bg-black/40 sm:hidden"
           style={{ zIndex: 15 }}
           onClick={onClose}
         />
       )}
 
-      {/* Bottom sheet — hidden until a station is clicked, works on all screen sizes */}
+      {/*
+        Mobile  (< sm): full-width bottom sheet, slides up from bottom
+        Desktop (sm+):  floating card anchored to bottom-right, same slide animation
+      */}
       <div
         className={[
-          "fixed bottom-0 left-0 right-0",
-          "bg-[#0D1527] border-t border-white/10 shadow-2xl rounded-t-2xl",
+          "fixed bottom-0 left-0 right-0 rounded-t-2xl",
+          "sm:bottom-4 sm:right-4 sm:left-auto sm:w-96 sm:rounded-2xl",
+          "bg-[#0D1527] border border-white/10 shadow-2xl",
           "transition-transform duration-300 ease-in-out",
-          station ? "translate-y-0" : "translate-y-full",
+          station ? "translate-y-0" : "translate-y-[110%]",
         ].join(" ")}
         style={{ zIndex: 20, maxHeight: "80vh", overflowY: "auto" }}
+        onClick={(e) => e.stopPropagation()}
       >
         {station && (
           <div>
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1">
+            {/* Drag handle — mobile only visual cue */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
               <div className="w-10 h-1 rounded-full bg-white/20" />
             </div>
 

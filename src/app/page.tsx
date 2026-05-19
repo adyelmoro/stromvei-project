@@ -124,15 +124,11 @@ export default function HomePage() {
         <PostcodeSearch mapInstance={mapInstance} />
       </div>
 
-      {/* Top-right: lang toggle (desktop only) + auth + logo (desktop only) */}
+      {/* Top-right: lang toggle + auth + logo */}
       <div className="fixed top-4 right-4 flex items-center gap-2" style={{ zIndex: 10 }}>
-        {/* Lang toggle — hidden on mobile (available in About page) */}
-        <div className="hidden sm:flex">
-          <LanguageToggle />
-        </div>
+        <LanguageToggle />
         <AuthButton />
-        {/* Logo — hidden on mobile (bottom nav serves as identity) */}
-        <div className="hidden sm:block bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
+        <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
           <span className="text-white font-bold text-sm tracking-tight">
             Strøm<span className="text-brand-blue font-light">Vei</span>
           </span>
