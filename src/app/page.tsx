@@ -105,7 +105,7 @@ export default function HomePage() {
 
         {/* Postcode — fills all remaining space between filter and right controls */}
         <div className="flex-1 min-w-0">
-          <PostcodeSearch mapInstance={mapInstance} fullWidth />
+          <PostcodeSearch mapInstance={mapInstance} fullWidth onReset={() => setSelectedStation(null)} />
         </div>
 
         {/* Lang toggle */}
@@ -159,7 +159,7 @@ export default function HomePage() {
             </button>
           </div>
         )}
-        <PostcodeSearch mapInstance={mapInstance} />
+        <PostcodeSearch mapInstance={mapInstance} onReset={() => setSelectedStation(null)} />
       </div>
 
       {/*

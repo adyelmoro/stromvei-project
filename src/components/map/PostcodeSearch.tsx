@@ -12,11 +12,12 @@ const MIN_DIGITS = 2; // show dropdown from 2 digits
 type Props = {
   mapInstance: maplibregl.Map | null;
   fullWidth?: boolean;
+  onReset?: () => void;
 };
 
 type PostcodeMatch = [string, string]; // [code, city]
 
-export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props) {
+export default function PostcodeSearch({ mapInstance, fullWidth = false, onReset }: Props) {
   const [value, setValue] = useState("");
   const [matches, setMatches] = useState<PostcodeMatch[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -166,9 +167,9 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props
         </svg>
 
         {/*
-          font-size: 16px prevents iOS Safari from auto-zooming on focus.
-          iOS zooms in when an input's font-size is < 16px; setting it to
-          exactly 16px disables that behaviour without affecting layout.
+          text-base (16px) on mobile prevents iOS Safari from auto-zooming on
+          focus — iOS zooms when font-size < 16px. sm:text-xs reverts to 12px
+          on desktop where zoom behaviour doesn't apply.
         */}
         <input
           ref={inputRef}
@@ -181,8 +182,7 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props
           onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, 4))}
           onKeyDown={handleKeyDown}
           onFocus={() => { if (matches.length > 0) setIsOpen(true); }}
-          style={{ fontSize: "16px", lineHeight: "1.25" }}
-          className="flex-1 bg-transparent text-white/80 placeholder-white/30 outline-none min-w-0"
+          className="flex-1 bg-transparent text-white/80 placeholder-white/30 outline-none min-w-0 text-base sm:text-xs"
           aria-label="Søk etter postnummer"
           aria-autocomplete="list"
           aria-expanded={isOpen}
@@ -197,7 +197,7 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false }: Props
           </svg>
         ) : value.length > 0 ? (
           <button
-            onClick={() => { setValue(""); setIsOpen(false); setStatus("idle"); }}
+            onClick={() => { setValue(""); setIsOpen(false); setStatus("idle"); onReset?.(); }}
             className="flex-shrink-0 text-white/30 hover:text-white/70 transition-colors"
             aria-label="Tøm søk"
           >
