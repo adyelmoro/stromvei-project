@@ -14,12 +14,13 @@ const SOURCE_ID = "stations";
 
 type Props = {
   stations: NobilStation[];
-  loading: boolean;
   onStationClick: (station: NobilStation) => void;
   onMapReady?: (map: maplibregl.Map) => void;
 };
 
-export default function Map({ stations, loading, onStationClick, onMapReady }: Props) {
+export default function Map({ stations, onStationClick, onMapReady }: Props) {
+  // The container div IS the map — position:fixed inset:0 so clientWidth
+  // is always exactly the viewport width, with no CSS chain in between.
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const stationsRef = useRef<NobilStation[]>([]);
@@ -54,20 +55,10 @@ export default function Map({ stations, loading, onStationClick, onMapReady }: P
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const container = containerRef.current;
-
-    // Set explicit pixel dimensions before MapLibre reads offsetWidth/offsetHeight.
-    // This is the most reliable approach — bypasses all CSS chain and zoom-level issues.
-    const applySize = () => {
-      container.style.width = window.innerWidth + "px";
-      container.style.height = window.innerHeight + "px";
-    };
-    applySize();
-
     const map = new maplibregl.Map({
-      container,
+      container: containerRef.current,
       style: TILE_STYLE,
-      center: [10.0, 62.0], // Norway — south-central, shows all populated areas
+      center: [10.0, 62.0],
       zoom: 5,
       minZoom: 4,
       maxZoom: 18,
@@ -78,7 +69,6 @@ export default function Map({ stations, loading, onStationClick, onMapReady }: P
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
-      map.resize();
       if (onMapReady) onMapReady(map);
 
       map.addSource(SOURCE_ID, {
@@ -89,7 +79,6 @@ export default function Map({ stations, loading, onStationClick, onMapReady }: P
         clusterRadius: 50,
       });
 
-      // Cluster circles
       map.addLayer({
         id: CLUSTER_LAYER_ID,
         type: "circle",
@@ -98,19 +87,13 @@ export default function Map({ stations, loading, onStationClick, onMapReady }: P
         paint: {
           "circle-color": [
             "step", ["get", "point_count"],
-            "#0066FF", 10,
-            "#1A7A4A", 50,
-            "#FFD700",
+            "#0066FF", 10, "#1A7A4A", 50, "#FFD700",
           ],
-          "circle-radius": [
-            "step", ["get", "point_count"],
-            20, 10, 30, 50, 40,
-          ],
+          "circle-radius": ["step", ["get", "point_count"], 20, 10, 30, 50, 40],
           "circle-opacity": 0.85,
         },
       });
 
-      // Cluster count labels
       map.addLayer({
         id: CLUSTER_COUNT_LAYER_ID,
         type: "symbol",
@@ -124,7 +107,6 @@ export default function Map({ stations, loading, onStationClick, onMapReady }: P
         paint: { "text-color": "#ffffff" },
       });
 
-      // Individual station dots
       map.addLayer({
         id: UNCLUSTERED_LAYER_ID,
         type: "circle",
@@ -152,63 +134,50 @@ export default function Map({ stations, loading, onStationClick, onMapReady }: P
 
     mapRef.current = map;
 
-    const onWindowResize = () => {
-      applySize();
-      map.resize();
-    };
-    window.addEventListener("resize", onWindowResize);
+    const onResize = () => map.resize();
+    window.addEventListener("resize", onResize);
 
     return () => {
-      window.removeEventListener("resize", onWindowResize);
+      window.removeEventListener("resize", onResize);
       map.remove();
       mapRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update GeoJSON data when stations change
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const updateData = () => {
-      const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-      if (source) source.setData(stationsToGeoJSON(stations));
+    const update = () => {
+      const src = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (src) src.setData(stationsToGeoJSON(stations));
     };
-    if (map.isStyleLoaded()) updateData();
-    else map.once("load", updateData);
+    if (map.isStyleLoaded()) update();
+    else map.once("load", update);
   }, [stations]);
 
-  // Wire click handlers
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const onLoad = () => {
+    const wire = () => {
       map.on("click", CLUSTER_LAYER_ID, handleClick);
       map.on("click", UNCLUSTERED_LAYER_ID, handleClick);
     };
-    if (map.isStyleLoaded()) onLoad();
-    else map.on("load", onLoad);
+    if (map.isStyleLoaded()) wire();
+    else map.on("load", wire);
     return () => {
       map.off("click", CLUSTER_LAYER_ID, handleClick);
       map.off("click", UNCLUSTERED_LAYER_ID, handleClick);
     };
   }, [handleClick]);
 
+  // This div IS the MapLibre container.
+  // position:fixed + inset:0 guarantees clientWidth === viewport width
+  // with zero CSS chain between this element and the viewport.
   return (
-    // Fixed to viewport — completely independent of parent CSS chain
-    <div style={{ position: "fixed", inset: 0, zIndex: 0 }}>
-      <div ref={containerRef} />
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-brand-dark/60 backdrop-blur-sm pointer-events-none">
-          <div className="flex items-center gap-3 text-white/70 text-sm">
-            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-            Henter ladestasjoner...
-          </div>
-        </div>
-      )}
-    </div>
+    <div
+      ref={containerRef}
+      style={{ position: "fixed", top: 0, right: 0, bottom: 0, left: 0, zIndex: 0 }}
+    />
   );
 }

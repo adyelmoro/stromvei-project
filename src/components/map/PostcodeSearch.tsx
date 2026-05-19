@@ -59,7 +59,6 @@ export default function PostcodeSearch({ mapInstance }: Props) {
       });
 
       setStatus("idle");
-      setValue("");
       inputRef.current?.blur();
     } catch {
       setErrorMsg("Søk feilet. Sjekk tilkoblingen din.");
@@ -70,7 +69,6 @@ export default function PostcodeSearch({ mapInstance }: Props) {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") search();
     if (e.key === "Escape") {
-      setValue("");
       setStatus("idle");
       inputRef.current?.blur();
     }
