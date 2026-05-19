@@ -97,13 +97,13 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Mobile layout: full-screen map, bottom sheet for filters | `[ ]` | |
-| Bottom navigation bar on mobile (Map / Saved / About) | `[ ]` | |
-| `LanguageToggle` component (NO / EN) | `[ ]` | Stored in localStorage |
-| All UI strings switch language when toggled | `[ ]` | |
-| Test on iPhone viewport (375px wide) | `[ ]` | |
-| Test on Android viewport (360px wide) | `[ ]` | |
-| First Vercel deploy with all Phase 1–5 features | `[ ]` | |
+| Mobile layout: full-screen map, bottom sheet for filters | `[x]` | All sheets work on mobile; overflow:hidden removed from body |
+| Bottom navigation bar on mobile (Map / Saved / About) | `[x]` | sm:hidden fixed bottom nav, active icons, in root layout |
+| `LanguageToggle` component (NO / EN) | `[x]` | Pill button, top-right on map + About page header |
+| All UI strings switch language when toggled | `[x]` | All t.* strings react instantly; stored in localStorage |
+| Test on iPhone viewport (375px wide) | `[x]` | Bottom nav + all sheets verified responsive |
+| Test on Android viewport (360px wide) | `[x]` | Same as above |
+| First Vercel deploy with all Phase 1–5 features | `[x]` | Live at https://stromvei-project.vercel.app |
 
 **Milestone 2 checkpoint:** ✅ when all Phase 2–5 tasks are done and deployed.
 
