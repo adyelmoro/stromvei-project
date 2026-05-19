@@ -16,9 +16,10 @@ type Props = {
   stations: NobilStation[];
   loading: boolean;
   onStationClick: (station: NobilStation) => void;
+  onMapReady?: (map: maplibregl.Map) => void;
 };
 
-export default function Map({ stations, loading, onStationClick }: Props) {
+export default function Map({ stations, loading, onStationClick, onMapReady }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const stationsRef = useRef<NobilStation[]>([]);
@@ -53,162 +54,140 @@ export default function Map({ stations, loading, onStationClick }: Props) {
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    // Defer init by one frame so the fixed container has resolved dimensions
-    const rafId = requestAnimationFrame(() => {
-      if (!containerRef.current || mapRef.current) return;
+    const container = containerRef.current;
 
-      const map = new maplibregl.Map({
-        container: containerRef.current,
-        style: TILE_STYLE,
-        center: [15.0, 65.5], // Norway centre — all stations visible at zoom 5
-        zoom: 5,
-        minZoom: 4,
-        maxZoom: 18,
-        attributionControl: false,
-      });
+    // Set explicit pixel dimensions before MapLibre reads offsetWidth/offsetHeight.
+    // This is the most reliable approach — bypasses all CSS chain and zoom-level issues.
+    const applySize = () => {
+      container.style.width = window.innerWidth + "px";
+      container.style.height = window.innerHeight + "px";
+    };
+    applySize();
 
-      map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
-      map.addControl(new maplibregl.NavigationControl(), "bottom-right");
-
-      map.on("load", () => {
-        // Staggered resize calls to cover any late-settling layout
-        map.resize();
-        requestAnimationFrame(() => {
-          map.resize();
-          requestAnimationFrame(() => map.resize());
-        });
-        setTimeout(() => map.resize(), 200);
-        setTimeout(() => map.resize(), 600);
-
-        map.addSource(SOURCE_ID, {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-          cluster: true,
-          clusterMaxZoom: 13,
-          clusterRadius: 50,
-        });
-
-        // Cluster circles
-        map.addLayer({
-          id: CLUSTER_LAYER_ID,
-          type: "circle",
-          source: SOURCE_ID,
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-color": [
-              "step", ["get", "point_count"],
-              "#0066FF", 10,
-              "#1A7A4A", 50,
-              "#FFD700",
-            ],
-            "circle-radius": [
-              "step", ["get", "point_count"],
-              20, 10, 30, 50, 40,
-            ],
-            "circle-opacity": 0.85,
-          },
-        });
-
-        // Cluster count labels
-        map.addLayer({
-          id: CLUSTER_COUNT_LAYER_ID,
-          type: "symbol",
-          source: SOURCE_ID,
-          filter: ["has", "point_count"],
-          layout: {
-            "text-field": "{point_count_abbreviated}",
-            "text-font": ["Open Sans Bold"],
-            "text-size": 13,
-          },
-          paint: { "text-color": "#ffffff" },
-        });
-
-        // Individual station dots
-        map.addLayer({
-          id: UNCLUSTERED_LAYER_ID,
-          type: "circle",
-          source: SOURCE_ID,
-          filter: ["!", ["has", "point_count"]],
-          paint: {
-            "circle-color": [
-              "case",
-              [">", ["get", "maxSpeedKw"], 50], "#0066FF",
-              [">=", ["get", "maxSpeedKw"], 22], "#1A7A4A",
-              "#6B7280",
-            ],
-            "circle-radius": 7,
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-            "circle-opacity": 0.9,
-          },
-        });
-
-        map.on("mouseenter", CLUSTER_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", CLUSTER_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
-        map.on("mouseenter", UNCLUSTERED_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", UNCLUSTERED_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
-      });
-
-      mapRef.current = map;
-
-      const resizeObserver = new ResizeObserver(() => map.resize());
-      resizeObserver.observe(containerRef.current!);
-
-      // Also resize on window resize as a safety net
-      const onWindowResize = () => map.resize();
-      window.addEventListener("resize", onWindowResize);
-
-      const cleanup = () => {
-        resizeObserver.disconnect();
-        window.removeEventListener("resize", onWindowResize);
-        map.remove();
-        mapRef.current = null;
-      };
-
-      // Store cleanup on the container so the outer cleanup can call it
-      (containerRef.current as HTMLDivElement & { _mapCleanup?: () => void })._mapCleanup = cleanup;
+    const map = new maplibregl.Map({
+      container,
+      style: TILE_STYLE,
+      center: [10.0, 62.0], // Norway — south-central, shows all populated areas
+      zoom: 5,
+      minZoom: 4,
+      maxZoom: 18,
+      attributionControl: false,
     });
 
-    return () => {
-      cancelAnimationFrame(rafId);
-      const el = containerRef.current as (HTMLDivElement & { _mapCleanup?: () => void }) | null;
-      el?._mapCleanup?.();
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
+
+    map.on("load", () => {
+      map.resize();
+      if (onMapReady) onMapReady(map);
+
+      map.addSource(SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+        cluster: true,
+        clusterMaxZoom: 13,
+        clusterRadius: 50,
+      });
+
+      // Cluster circles
+      map.addLayer({
+        id: CLUSTER_LAYER_ID,
+        type: "circle",
+        source: SOURCE_ID,
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": [
+            "step", ["get", "point_count"],
+            "#0066FF", 10,
+            "#1A7A4A", 50,
+            "#FFD700",
+          ],
+          "circle-radius": [
+            "step", ["get", "point_count"],
+            20, 10, 30, 50, 40,
+          ],
+          "circle-opacity": 0.85,
+        },
+      });
+
+      // Cluster count labels
+      map.addLayer({
+        id: CLUSTER_COUNT_LAYER_ID,
+        type: "symbol",
+        source: SOURCE_ID,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": "{point_count_abbreviated}",
+          "text-font": ["Open Sans Bold"],
+          "text-size": 13,
+        },
+        paint: { "text-color": "#ffffff" },
+      });
+
+      // Individual station dots
+      map.addLayer({
+        id: UNCLUSTERED_LAYER_ID,
+        type: "circle",
+        source: SOURCE_ID,
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": [
+            "case",
+            [">", ["get", "maxSpeedKw"], 50], "#0066FF",
+            [">=", ["get", "maxSpeedKw"], 22], "#1A7A4A",
+            "#6B7280",
+          ],
+          "circle-radius": 7,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+          "circle-opacity": 0.9,
+        },
+      });
+
+      map.on("mouseenter", CLUSTER_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", CLUSTER_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", UNCLUSTERED_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", UNCLUSTERED_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+    });
+
+    mapRef.current = map;
+
+    const onWindowResize = () => {
+      applySize();
+      map.resize();
     };
+    window.addEventListener("resize", onWindowResize);
+
+    return () => {
+      window.removeEventListener("resize", onWindowResize);
+      map.remove();
+      mapRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update GeoJSON data when stations change
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-
     const updateData = () => {
       const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
       if (source) source.setData(stationsToGeoJSON(stations));
     };
-
-    if (map.isStyleLoaded()) {
-      updateData();
-    } else {
-      map.once("load", updateData);
-    }
+    if (map.isStyleLoaded()) updateData();
+    else map.once("load", updateData);
   }, [stations]);
 
   // Wire click handlers
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-
     const onLoad = () => {
       map.on("click", CLUSTER_LAYER_ID, handleClick);
       map.on("click", UNCLUSTERED_LAYER_ID, handleClick);
     };
-
-    if (map.isStyleLoaded()) {
-      onLoad();
-    } else {
-      map.on("load", onLoad);
-    }
-
+    if (map.isStyleLoaded()) onLoad();
+    else map.on("load", onLoad);
     return () => {
       map.off("click", CLUSTER_LAYER_ID, handleClick);
       map.off("click", UNCLUSTERED_LAYER_ID, handleClick);
@@ -216,10 +195,9 @@ export default function Map({ stations, loading, onStationClick }: Props) {
   }, [handleClick]);
 
   return (
-    // position: fixed + inset: 0 anchors to the viewport directly,
-    // bypassing the entire parent CSS chain
+    // Fixed to viewport — completely independent of parent CSS chain
     <div style={{ position: "fixed", inset: 0, zIndex: 0 }}>
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      <div ref={containerRef} />
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-brand-dark/60 backdrop-blur-sm pointer-events-none">
           <div className="flex items-center gap-3 text-white/70 text-sm">
