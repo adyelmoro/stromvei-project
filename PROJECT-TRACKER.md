@@ -79,17 +79,17 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Supabase database tables created (`saved_stations`, `saved_routes`) | `[ ]` | See TECH-SPEC.md for SQL |
-| Row Level Security policies applied | `[ ]` | |
-| `AuthProvider` wrapping app (Supabase session context) | `[ ]` | |
-| `AuthButton` component (Sign in with Google / Sign out) | `[ ]` | |
-| Google OAuth configured in Supabase dashboard | `[ ]` | |
-| "Save station" button in `StationDrawer` (only when logged in) | `[ ]` | |
-| Save station to Supabase `saved_stations` | `[ ]` | |
-| `/saved` page: list of saved stations | `[ ]` | Auth-gated, redirect to home if not signed in |
-| Saved station card: click → fly to station on map | `[ ]` | |
-| Remove saved station | `[ ]` | |
-| `useSavedPlaces` hook | `[ ]` | |
+| Supabase database tables created (`saved_stations`, `saved_routes`) | `[x]` | SQL run in Supabase dashboard 2026-05-19 |
+| Row Level Security policies applied | `[x]` | RLS + policy on saved_stations |
+| `AuthProvider` wrapping app (Supabase session context) | `[x]` | Context: session, user, signInWithGoogle, signOut |
+| `AuthButton` component (Sign in with Google / Sign out) | `[x]` | Sign-in pill + avatar chip with dropdown |
+| Google OAuth configured in Supabase dashboard | `[x]` | Google Cloud Console + Supabase providers + URL config |
+| "Save station" button in `StationDrawer` (only when logged in) | `[x]` | Toggle: Lagre stasjon ↔ Lagret; hint if signed out |
+| Save station to Supabase `saved_stations` | `[x]` | Optimistic update + rollback on error |
+| `/saved` page: list of saved stations | `[x]` | Auth-gated, redirects to / if not signed in |
+| Saved station card: click → fly to station on map | `[x]` | Vis → /?lat=&lng=, home page flies on map-ready |
+| Remove saved station | `[x]` | Optimistic remove with × button |
+| `useSavedPlaces` hook | `[x]` | saveStation / removeStation / isSaved |
 
 ---
 
