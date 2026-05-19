@@ -14,7 +14,8 @@
 html,
 body {
   height: 100%;
-  overflow: hidden;
+  /* overflow: hidden removed — map page is all position:fixed so body never scrolls;
+     saved / about pages need to scroll freely */
 }
 
 .map-container {

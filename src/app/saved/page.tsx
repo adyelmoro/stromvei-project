@@ -23,7 +23,7 @@ export default function SavedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-dark text-white">
+    <div className="min-h-screen bg-brand-dark text-white pb-24 sm:pb-0">
       {/* Top bar */}
       <header className="flex items-center justify-between px-5 py-4 border-b border-white/10">
         <Link

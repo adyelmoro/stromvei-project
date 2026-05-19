@@ -11,6 +11,7 @@ import StationDrawer from "@/components/map/StationDrawer";
 import PostcodeSearch from "@/components/map/PostcodeSearch";
 import FilterPanel from "@/components/map/FilterPanel";
 import AuthButton from "@/components/auth/AuthButton";
+import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useI18n } from "@/lib/i18n/provider";
 import type { NobilStation } from "@/types/nobil";
 
@@ -118,8 +119,9 @@ export default function HomePage() {
         <PostcodeSearch mapInstance={mapInstance} />
       </div>
 
-      {/* Top-right: logo + auth */}
+      {/* Top-right: lang toggle + auth + logo */}
       <div className="fixed top-4 right-4 flex items-center gap-2" style={{ zIndex: 10 }}>
+        <LanguageToggle />
         <AuthButton />
         <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">
           <span className="text-white font-bold text-sm tracking-tight">

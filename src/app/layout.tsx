@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/provider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import BottomNav from "@/components/layout/BottomNav";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,9 +26,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="no" className="dark h-full">
-      <body className={`${inter.className} bg-brand-dark text-white h-full overflow-hidden`}>
+      <body className={`${inter.className} bg-brand-dark text-white h-full`}>
         <AuthProvider>
-          <I18nProvider>{children}</I18nProvider>
+          <I18nProvider>
+            {children}
+            <BottomNav />
+          </I18nProvider>
         </AuthProvider>
       </body>
     </html>
