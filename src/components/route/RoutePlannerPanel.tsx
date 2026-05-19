@@ -154,6 +154,7 @@ export default function RoutePlannerPanel({
               }}
               onSelect={handleOriginSelect}
               onClear={() => setOriginCoords(null)}
+              dropUp
             />
           </div>
 
@@ -171,6 +172,7 @@ export default function RoutePlannerPanel({
               }}
               onSelect={handleDestSelect}
               onClear={() => setDestCoords(null)}
+              dropUp
             />
           </div>
 
@@ -189,7 +191,7 @@ export default function RoutePlannerPanel({
                 value={rangeKm}
                 onChange={(e) => setRangeKm(e.target.value)}
                 placeholder={t.routePlanner.rangePlaceholder}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 style={{ fontSize: "16px" }}
               />
             </div>
@@ -205,7 +207,7 @@ export default function RoutePlannerPanel({
                 value={minChargePct}
                 onChange={(e) => setMinChargePct(e.target.value)}
                 placeholder={t.routePlanner.minChargePlaceholder}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 style={{ fontSize: "16px" }}
               />
             </div>

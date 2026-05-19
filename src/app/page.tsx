@@ -156,7 +156,7 @@ export default function HomePage() {
 
         {/* Postcode — fills all remaining space between filter and right controls */}
         <div className="flex-1 min-w-0">
-          <PostcodeSearch mapInstance={mapInstance} fullWidth onReset={() => setSelectedStation(null)} />
+          <PostcodeSearch mapInstance={mapInstance} fullWidth onReset={() => setSelectedStation(null)} onFocus={() => { setRoutePlannerOpen(false); setFilterOpen(false); }} />
         </div>
 
         {/* Lang toggle */}

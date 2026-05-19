@@ -28,6 +28,8 @@ type Props = {
   onChange: (text: string) => void;
   onSelect: (result: AddressResult) => void;
   onClear?: () => void;
+  /** Open the dropdown upward — use when the input is near the bottom of the screen */
+  dropUp?: boolean;
 };
 
 /** Format a Nominatim result as a short, readable address */
@@ -41,7 +43,7 @@ function formatAddress(r: NominatimResult): string {
   return parts.join(", ") || r.display_name.split(",")[0];
 }
 
-export default function AddressSearch({ placeholder, value, onChange, onSelect, onClear }: Props) {
+export default function AddressSearch({ placeholder, value, onChange, onSelect, onClear, dropUp = false }: Props) {
   const [results, setResults] = useState<AddressResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,11 +56,9 @@ export default function AddressSearch({ placeholder, value, onChange, onSelect, 
   const search = useCallback(async (query: string) => {
     setLoading(true);
     try {
-      const url =
-        `https://nominatim.openstreetmap.org/search` +
-        `?format=json&addressdetails=1&countrycodes=no` +
-        `&q=${encodeURIComponent(query)}&limit=5`;
-      const res = await fetch(url, { headers: { "Accept-Language": "no" } });
+      // Route through our server-side proxy — avoids CSP and Nominatim rate limits
+      const url = `/api/geocode?q=${encodeURIComponent(query)}&limit=5`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error();
       const data: NominatimResult[] = await res.json();
       const mapped = data.map((r) => ({
@@ -184,7 +184,10 @@ export default function AddressSearch({ placeholder, value, onChange, onSelect, 
       {isOpen && results.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-1 bg-[#0D1527] border border-white/10 rounded-lg overflow-hidden shadow-2xl"
+          className={[
+            "absolute left-0 right-0 bg-[#0D1527] border border-white/10 rounded-lg overflow-hidden shadow-2xl",
+            dropUp ? "bottom-full mb-1" : "top-full mt-1",
+          ].join(" ")}
           style={{ zIndex: 60 }}
           role="listbox"
         >

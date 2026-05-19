@@ -13,11 +13,13 @@ type Props = {
   mapInstance: maplibregl.Map | null;
   fullWidth?: boolean;
   onReset?: () => void;
+  /** Called when the input receives focus — lets the parent close competing panels */
+  onFocus?: () => void;
 };
 
 type PostcodeMatch = [string, string]; // [code, city]
 
-export default function PostcodeSearch({ mapInstance, fullWidth = false, onReset }: Props) {
+export default function PostcodeSearch({ mapInstance, fullWidth = false, onReset, onFocus }: Props) {
   const [value, setValue] = useState("");
   const [matches, setMatches] = useState<PostcodeMatch[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -55,12 +57,9 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false, onReset
     setHighlightedIndex(-1);
 
     try {
-      const url =
-        `https://nominatim.openstreetmap.org/search` +
-        `?format=json&addressdetails=1&countrycodes=no` +
-        `&postalcode=${encodeURIComponent(postcode)}&limit=1`;
-
-      const res = await fetch(url, { headers: { "Accept-Language": "no" } });
+      // Proxy through our API route — avoids CSP and Nominatim rate limits
+      const url = `/api/geocode?postalcode=${encodeURIComponent(postcode)}&limit=1`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error("network");
 
       const data = await res.json() as Array<{ lat: string; lon: string }>;
@@ -181,7 +180,7 @@ export default function PostcodeSearch({ mapInstance, fullWidth = false, onReset
           value={value}
           onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, 4))}
           onKeyDown={handleKeyDown}
-          onFocus={() => { if (matches.length > 0) setIsOpen(true); }}
+          onFocus={() => { if (matches.length > 0) setIsOpen(true); onFocus?.(); }}
           className="flex-1 bg-transparent text-white/80 placeholder-white/30 outline-none min-w-0 text-base sm:text-xs"
           aria-label="Søk etter postnummer"
           aria-autocomplete="list"
