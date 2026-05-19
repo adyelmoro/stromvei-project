@@ -197,15 +197,15 @@ function FilterCheckbox({
 }) {
   return (
     <label className="flex items-center gap-3 cursor-pointer group">
-      {/* Custom checkbox */}
+      {/* Custom checkbox — no onClick here; the <label> wrapper forwards
+          clicks anywhere in the row to the sr-only <input>, firing onChange once */}
       <div
         className={[
-          "w-4 h-4 rounded flex-shrink-0 border transition-all",
+          "w-4 h-4 rounded flex-shrink-0 border transition-all pointer-events-none",
           checked
             ? "bg-brand-blue border-brand-blue"
             : "bg-transparent border-white/30 group-hover:border-white/60",
         ].join(" ")}
-        onClick={onChange}
       >
         {checked && (
           <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
