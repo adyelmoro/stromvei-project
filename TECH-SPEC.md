@@ -10,20 +10,21 @@
 │                        BROWSER                              │
 │                                                             │
 │   ┌─────────────────┐    ┌───────────────────────────────┐  │
-│   │   Next.js 15    │    │       Mapbox GL JS            │  │
+│   │   Next.js 16    │    │     MapLibre GL JS 4.x        │  │
 │   │   App Router    │    │   (client-side, canvas)       │  │
 │   │   TypeScript    │    │                               │  │
 │   │   Tailwind CSS  │    │   Nobil station data          │  │
-│   └────────┬────────┘    │   Mapbox Directions route     │  │
+│   └────────┬────────┘    │   OSRM route geometry         │  │
 │            │             │   Turf.js calculations        │  │
 │            │             └───────────────────────────────┘  │
 └────────────┼────────────────────────────────────────────────┘
              │
     ┌────────┼──────────────────────────────────────┐
     │        │         Next.js API Routes            │
-    │  /api/nobil/stations  (proxy + cache)          │
-    │  /api/nobil/station/[id]  (detail)             │
-    │  /api/route  (OSRM proxy)                      │
+    │  /api/nobil/stations  (proxy + 15min cache)    │
+    │  /api/route  (OSRM proxy + 1h cache)           │
+    │  /api/geocode  (Nominatim proxy + 24h cache)   │
+    │  /auth/callback  (Supabase OAuth)              │
     └────────┼──────────────────────────────────────┘
              │
     ┌────────┼──────────────────────────────────────┐
@@ -43,8 +44,8 @@
     │                                                │
     │  ┌──────────────────────────────────┐         │
     │  │         Supabase                 │         │
-    │  │  Auth (Google)                   │         │
-    │  │  DB: saved_stations, saved_routes│         │
+    │  │  Auth (Google OAuth)             │         │
+    │  │  DB: saved_stations              │         │
     │  └──────────────────────────────────┘         │
     └────────────────────────────────────────────────┘
 ```
@@ -55,7 +56,7 @@
 
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
-| Framework | Next.js | 15.x | App Router, SSR, API Routes |
+| Framework | Next.js | 16.x | App Router, SSR, API Routes |
 | Language | TypeScript | 5.x | Strict mode, no `any` |
 | Styling | Tailwind CSS | 3.x | Utility-first, no extra CSS |
 | Map | MapLibre GL JS | 4.x | Open-source map, clustering, layers — no API key needed |
@@ -77,61 +78,64 @@
 stromvei/
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx              # Root layout, font, metadata
-│   │   ├── page.tsx                # Home page — map view
+│   │   ├── layout.tsx              # Root layout, font, metadata, PWA manifest
+│   │   ├── page.tsx                # Home page — map view + all overlay panels
 │   │   ├── saved/
-│   │   │   └── page.tsx            # Saved stations + routes (auth gated)
+│   │   │   └── page.tsx            # Saved stations (auth gated)
 │   │   ├── about/
 │   │   │   └── page.tsx            # About the project
+│   │   ├── auth/
+│   │   │   └── callback/route.ts   # Supabase OAuth callback
 │   │   └── api/
-│   │       ├── nobil/
-│   │       │   └── stations/
-│   │       │       └── route.ts    # Nobil API proxy (hides API key)
-│   │       └── route/
-│   │           └── route.ts        # Mapbox Directions proxy
+│   │       ├── nobil/stations/
+│   │       │   └── route.ts        # Nobil API proxy (15-min module-level cache)
+│   │       ├── route/
+│   │       │   └── route.ts        # OSRM proxy (1h cache)
+│   │       └── geocode/
+│   │           └── route.ts        # Nominatim proxy (24h cache, CSP bypass)
 │   ├── components/
 │   │   ├── map/
-│   │   │   ├── Map.tsx             # Main MapLibre GL JS wrapper
-│   │   │   ├── StationMarkers.tsx  # Cluster + individual markers
-│   │   │   ├── StationDrawer.tsx   # Slide-in station detail panel
-│   │   │   └── RouteLayer.tsx      # Drawn route + stop markers
-│   │   ├── filters/
-│   │   │   ├── FilterPanel.tsx     # Desktop filter sidebar
-│   │   │   └── FilterSheet.tsx     # Mobile bottom sheet
-│   │   ├── route-planner/
-│   │   │   ├── RoutePlannerForm.tsx    # A/B/range inputs
-│   │   │   ├── RoutePlannerResults.tsx # List of suggested stops
-│   │   │   └── AddressSearch.tsx       # Mapbox Geocoder wrapper
+│   │   │   ├── Map.tsx             # MapLibre GL JS — cluster + route + suggested stop layers
+│   │   │   ├── StationDrawer.tsx   # Station detail bottom sheet (mobile) / floating card (desktop)
+│   │   │   ├── FilterPanel.tsx     # Filter panel (speed, connector, network)
+│   │   │   ├── AddressSearch.tsx   # Nominatim autocomplete with justSelectedRef anti-flicker
+│   │   │   └── PostcodeSearch.tsx  # Postcode → fly-to on map
+│   │   ├── route/
+│   │   │   └── RoutePlannerPanel.tsx  # Origin/dest inputs, range, stop results
 │   │   ├── auth/
-│   │   │   ├── AuthButton.tsx      # Sign in / Sign out
+│   │   │   ├── AuthButton.tsx      # Sign in with Google / avatar + dropdown
 │   │   │   └── AuthProvider.tsx    # Supabase session context
+│   │   ├── layout/
+│   │   │   └── BottomNav.tsx       # Mobile bottom navigation (Map / Saved / About / Route)
 │   │   └── ui/
-│   │       ├── Button.tsx
-│   │       ├── Badge.tsx           # Connector type, speed badges
-│   │       ├── Drawer.tsx          # Reusable slide-in drawer
-│   │       └── LanguageToggle.tsx  # NO/EN switch
+│   │       └── LanguageToggle.tsx  # NO/EN pill switch
 │   ├── lib/
-│   │   ├── nobil.ts                # Nobil API client + types
-│   │   ├── maplibre.ts             # MapLibre helpers + config
-│   │   ├── route-planner.ts        # Greedy algorithm implementation
+│   │   ├── nobil.ts                # Nobil parser + stationsToGeoJSON
+│   │   ├── route-planner.ts        # Greedy charging stop algorithm (Turf.js)
+│   │   ├── route-filter.ts         # filterStationsAlongRoute (5km corridor)
+│   │   ├── route-planner-context.tsx  # Context: toggle bridge + hasActiveRoute
+│   │   ├── mock-stations.ts        # 18 mock stations (fallback when no Nobil key)
 │   │   ├── supabase/
 │   │   │   ├── client.ts           # Browser Supabase client
 │   │   │   └── server.ts           # Server Supabase client
 │   │   └── i18n/
+│   │       ├── provider.tsx        # I18nProvider + useI18n hook
 │   │       ├── no.ts               # Norwegian (Bokmål) strings
 │   │       └── en.ts               # English strings
 │   ├── hooks/
-│   │   ├── useStations.ts          # Fetches + caches Nobil data
-│   │   ├── useFilters.ts           # Filter state management
-│   │   ├── useRoutePlanner.ts      # Route planner state + algorithm
-│   │   └── useSavedPlaces.ts       # Supabase saved data
+│   │   ├── useStations.ts          # Fetches Nobil data; mock fallback; filter application
+│   │   ├── useFilters.ts           # Filter state: speed, connector, network
+│   │   └── useSavedPlaces.ts       # Supabase saved_stations CRUD (optimistic updates)
 │   └── types/
-│       ├── nobil.ts                # Nobil API response types
-│       ├── map.ts                  # GeoJSON + MapLibre types
-│       └── filters.ts              # Filter state types
+│       ├── nobil.ts                # NobilStation + ConnectorType types
+│       └── filters.ts              # Filters type
 ├── public/
-│   ├── favicon.ico
-│   └── og-image.png                # Open Graph image for sharing
+│   ├── favicon.svg                 # App icon (bolt on dark squircle)
+│   ├── og-image.svg                # Open Graph image (1200×630)
+│   ├── manifest.json               # PWA manifest
+│   ├── logo-dark.svg
+│   ├── logo-light.svg
+│   └── logo-mark.svg
 ├── .env.example
 ├── .env.local                      # (gitignored)
 ├── next.config.ts
@@ -139,6 +143,21 @@ stromvei/
 ├── tsconfig.json
 └── package.json
 ```
+
+### Architecture Deviations from Original Spec
+
+| Spec | Actual | Reason |
+|------|--------|--------|
+| Next.js 15 | Next.js 16.2.6 | Latest stable at project start |
+| Mapbox GL JS | MapLibre GL JS 4.x | Mapbox requires credit card; MapLibre is open-source fork with identical API |
+| Mapbox Directions | OSRM public API | Same reason — no card, no key |
+| Mapbox Geocoder | Nominatim (OpenStreetMap) | Free, keyless, Norway-specific |
+| Web Worker for Turf | Main thread | Routes up to ~750 km; algorithm runs in <5ms with 18 mock stations; defer to real-data phase |
+| `map.once("load")` fallback | `map.once("idle")` | `isStyleLoaded()` returns false during tile fetches; `"load"` only fires once at startup; `"idle"` fires whenever rendering completes |
+| `firstSymbolId` as beforeId | `CLUSTER_LAYER_ID` | OpenFreeMap's first symbol layer is below fill layers; route line invisible |
+| StationMarkers.tsx | Inline in Map.tsx | Simpler — all layers managed in one place |
+| RouteLayer.tsx | Inline in Map.tsx | Same — remove/re-add pattern cleaner in one useEffect |
+| saved_routes table | Not implemented | Phase 7 scope reduced — algorithm works, UI save deferred to post-MVP |
 
 ---
 
@@ -332,7 +351,7 @@ map.addSource('stations', {
 
 **Nobil data size:** ~10,000 stations at ~300 bytes each = ~3MB raw. After parsing to our NobilStation type: ~2MB. This is fetched once on load and cached. Acceptable.
 
-**Route planner geospatial:** Turf.js `nearestPointOnLine` is O(n) on the number of route vertices. Mapbox routes have ~500–2,000 vertices for Norway-length journeys. With 10,000 stations, the filter pass is 10,000 × 500 = 5M operations. This must run in a Web Worker to avoid blocking the UI thread.
+**Route planner geospatial:** Turf.js `nearestPointOnLine` is O(n) on the number of route vertices. OSRM routes have ~500–2,000 vertices for Norway-length journeys. With 10,000 stations, the filter pass is 10,000 × 500 = 5M operations. Currently runs on the main thread (acceptable with 18 mock stations / fast with real data up to ~750 km); move to a Web Worker if performance degrades with full 10,000 station dataset.
 
 ---
 
@@ -349,7 +368,7 @@ No Mapbox token needed — all map/routing/geocoding services are free and keyle
 
 **Build config:** Standard Next.js on Vercel — zero config needed.
 
-**Domain:** TBD — stromvei.vercel.app initially, custom .no domain optional.
+**Domain:** stromvei-project.vercel.app (live). Custom .no domain optional post-launch.
 
 ---
 
