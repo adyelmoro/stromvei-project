@@ -172,12 +172,12 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| GitHub repo set to public | `[ ]` | |
-| Repo pinned on github.com/adyelmoro | `[ ]` | |
-| Add live URL to CV Projects section | `[ ]` | |
-| LinkedIn post published | `[ ]` | See PLAN.md for post idea |
-| dev.to article drafted | `[ ]` | |
-| Start DokumentAI project | `[ ]` | |
+| GitHub repo set to public | `[x]` | Already public from day 1 — github.com/adyelmoro/stromvei-project |
+| Repo pinned on github.com/adyelmoro | `[ ]` | **Manual — Ayyad pins in GitHub profile settings** |
+| Add live URL to CV Projects section | `[x]` | StrømVei added as first project in cv-build-may.js; docx rebuilt 2026-05-20 |
+| LinkedIn post drafted | `[x]` | Draft in session notes — Ayyad publishes manually |
+| dev.to article drafted | `[x]` | Draft in session notes — Ayyad publishes manually |
+| Start DokumentAI project | `[ ]` | Next session |
 
 ---
 
