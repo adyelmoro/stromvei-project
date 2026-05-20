@@ -83,7 +83,9 @@ const no = {
     stopConnectors: (types: string) => `Tilgjengelig: ${types}`,
     clearRoute: "Fjern rute",
     errorNoStation:
-      "Ingen stasjon innenfor rekkevidde. Prøv å øke rekkevidden eller endre minimumsladingen.",
+      "Ingen ladestasjon langs ruten er innenfor rekkevidde. Prøv å øke rekkevidden.",
+    errorDestUnreachable:
+      "Kan ikke nå destinasjonen — ingen stasjon dekker den siste strekningen. Prøv å øke rekkevidden.",
     errorNoRoute:
       "Finner ikke rute mellom disse stedene. Sjekk stednavnene og prøv igjen.",
   },

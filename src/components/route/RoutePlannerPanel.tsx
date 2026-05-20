@@ -5,6 +5,8 @@ import AddressSearch from "@/components/map/AddressSearch";
 import type { AddressResult } from "@/components/map/AddressSearch";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Feature, LineString } from "geojson";
+import type { RoutePlanResult, ChargingStop } from "@/lib/route-planner";
+import type { ConnectorType } from "@/types/nobil";
 
 export type RouteResult = {
   geojson: Feature<LineString>;
@@ -18,6 +20,13 @@ type Props = {
   onRouteReady: (result: RouteResult) => void;
   onRouteClear: () => void;
   activeRoute: RouteResult | null;
+  // EV settings — lifted to page.tsx so the algorithm can run there
+  rangeKm: string;
+  onRangeChange: (v: string) => void;
+  minChargePct: string;
+  onMinChargeChange: (v: string) => void;
+  // Algorithm result — null while no route is active
+  planResult: RoutePlanResult | null;
 };
 
 function formatDuration(min: number): string {
@@ -27,12 +36,58 @@ function formatDuration(min: number): string {
   return m > 0 ? `${h} t ${m} min` : `${h} t`;
 }
 
+const CONNECTOR_LABELS: Record<ConnectorType, string> = {
+  CCS: "CCS",
+  CHAdeMO: "CHAdeMO",
+  Type2: "Type 2",
+  Tesla: "Tesla",
+  Other: "Annet",
+};
+
+function StopItem({ stop, index }: { stop: ChargingStop; index: number }) {
+  const connectorTypes = [
+    ...new Set(stop.station.connectors.map((c) => c.type)),
+  ]
+    .map((t) => CONNECTOR_LABELS[t] ?? t)
+    .join(" · ");
+
+  const maxSpeedKw = Math.max(0, ...stop.station.connectors.map((c) => c.speedKw));
+
+  return (
+    <div className="flex items-start gap-2.5">
+      {/* Stop number badge */}
+      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center mt-0.5">
+        <span className="text-white text-[10px] font-bold leading-none">{index}</span>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-1">
+          <p className="text-white/80 text-xs font-medium truncate">{stop.station.name}</p>
+          <span className="text-white/35 text-[11px] flex-shrink-0 tabular-nums">km {stop.distanceFromStartKm}</span>
+        </div>
+        <div className="flex items-center justify-between gap-1 mt-0.5">
+          <span className="text-white/40 text-[11px] truncate">
+            {connectorTypes}{maxSpeedKw > 0 ? ` · ${maxSpeedKw} kW` : ""}
+          </span>
+          <span className="text-white/25 text-[11px] flex-shrink-0 tabular-nums">+{stop.distanceFromPrevKm} km</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RoutePlannerPanel({
   isOpen,
   onClose,
   onRouteReady,
   onRouteClear,
   activeRoute,
+  rangeKm,
+  onRangeChange,
+  minChargePct,
+  onMinChargeChange,
+  planResult,
 }: Props) {
   const { t } = useI18n();
 
@@ -40,8 +95,6 @@ export default function RoutePlannerPanel({
   const [originCoords, setOriginCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [destText, setDestText] = useState("");
   const [destCoords, setDestCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [rangeKm, setRangeKm] = useState("400");
-  const [minChargePct, setMinChargePct] = useState("20");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,6 +182,47 @@ export default function RoutePlannerPanel({
             </div>
           </div>
 
+          {/* Algorithm result */}
+          {planResult && (
+            planResult.ok ? (
+              planResult.noStopNeeded ? (
+                /* No stop needed */
+                <div className="flex items-center gap-2 text-green-400/80 text-xs bg-green-900/20 border border-green-500/20 rounded-xl px-3 py-2.5">
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  {t.routePlanner.noStopsNeeded(destText || "destinasjonen")}
+                </div>
+              ) : (
+                /* Stop list */
+                <div className="flex flex-col gap-2">
+                  <p className="text-white/40 text-[11px] font-medium uppercase tracking-wide">
+                    {t.routePlanner.stopsHeader(planResult.stops.length)}
+                  </p>
+                  <div className="flex flex-col gap-2.5 max-h-44 overflow-y-auto pr-0.5">
+                    {planResult.stops.map((stop, i) => (
+                      <StopItem key={stop.station.id} stop={stop} index={i + 1} />
+                    ))}
+                  </div>
+                </div>
+              )
+            ) : (
+              /* Error */
+              <div className="flex items-start gap-2 text-amber-400/80 text-xs bg-amber-900/20 border border-amber-500/20 rounded-xl px-3 py-2.5">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span>
+                  {planResult.error === "no_station_in_range"
+                    ? t.routePlanner.errorNoStation
+                    : t.routePlanner.errorDestUnreachable}
+                </span>
+              </div>
+            )
+          )}
+
           {/* Clear route button */}
           <button
             onClick={handleClear}
@@ -187,7 +281,7 @@ export default function RoutePlannerPanel({
               min="50"
               max="1000"
               value={rangeKm}
-              onChange={(e) => setRangeKm(e.target.value)}
+              onChange={(e) => onRangeChange(e.target.value)}
               placeholder={t.routePlanner.rangePlaceholder}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               style={{ fontSize: "16px" }}
@@ -205,7 +299,7 @@ export default function RoutePlannerPanel({
               min="0"
               max="80"
               value={minChargePct}
-              onChange={(e) => setMinChargePct(e.target.value)}
+              onChange={(e) => onMinChargeChange(e.target.value)}
               placeholder={t.routePlanner.minChargePlaceholder}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/80 placeholder-white/25 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               style={{ fontSize: "16px" }}

@@ -17,6 +17,8 @@ import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRoutePlanner } from "@/lib/route-planner-context";
 import { filterStationsAlongRoute } from "@/lib/route-filter";
+import { planChargingStops } from "@/lib/route-planner";
+import type { RoutePlanResult } from "@/lib/route-planner";
 import type { NobilStation } from "@/types/nobil";
 
 const Map = dynamic(() => import("@/components/map/Map"), { ssr: false });
@@ -51,6 +53,10 @@ export default function HomePage() {
   const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
   const { registerToggle, setHasActiveRoute } = useRoutePlanner();
 
+  // EV settings (lifted from RoutePlannerPanel so the algorithm can run here)
+  const [rangeKm, setRangeKm] = useState("400");
+  const [minChargePct, setMinChargePct] = useState("20");
+
   // When a route is active, narrow displayed stations to the 5 km corridor
   const displayedStations = useMemo(
     () =>
@@ -58,6 +64,21 @@ export default function HomePage() {
         ? filterStationsAlongRoute(filtered, activeRoute.geojson)
         : filtered,
     [filtered, activeRoute]
+  );
+
+  // Run the greedy algorithm whenever route, corridor stations, or EV settings change
+  const planResult = useMemo((): RoutePlanResult | null => {
+    if (!activeRoute) return null;
+    const rangeNum = parseFloat(rangeKm);
+    const minNum = parseFloat(minChargePct);
+    if (isNaN(rangeNum) || rangeNum <= 0 || isNaN(minNum)) return null;
+    return planChargingStops(activeRoute.geojson, displayedStations, rangeNum, minNum);
+  }, [activeRoute, displayedStations, rangeKm, minChargePct]);
+
+  // Stations selected by the algorithm — rendered as distinct orange markers on the map
+  const suggestedStops = useMemo(
+    () => (planResult?.ok ? planResult.stops.map((s) => s.station) : []),
+    [planResult]
   );
 
   const handleMapReady = useCallback((map: maplibregl.Map) => {
@@ -126,6 +147,7 @@ export default function HomePage() {
         onStationClick={handleStationClick}
         onMapReady={handleMapReady}
         route={activeRoute?.geojson ?? null}
+        suggestedStops={suggestedStops}
       />
 
       {/* ── MOBILE top bar ───────────────────────────────────────────────────
@@ -293,6 +315,11 @@ export default function HomePage() {
         onRouteReady={handleRouteReady}
         onRouteClear={handleRouteClear}
         activeRoute={activeRoute}
+        rangeKm={rangeKm}
+        onRangeChange={setRangeKm}
+        minChargePct={minChargePct}
+        onMinChargeChange={setMinChargePct}
+        planResult={planResult}
       />
 
       {/* Station detail — bottom sheet */}

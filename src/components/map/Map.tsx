@@ -15,15 +15,18 @@ const SOURCE_ID = "stations";
 const ROUTE_SOURCE_ID = "route";
 const ROUTE_CASING_LAYER_ID = "route-line-casing";
 const ROUTE_LINE_LAYER_ID = "route-line";
+const SUGGESTED_SOURCE_ID = "suggested-stops";
+const SUGGESTED_LAYER_ID = "suggested-stop-point";
 
 type Props = {
   stations: NobilStation[];
   onStationClick: (station: NobilStation) => void;
   onMapReady?: (map: maplibregl.Map) => void;
   route?: Feature<LineString> | null;
+  suggestedStops?: NobilStation[];
 };
 
-export default function Map({ stations, onStationClick, onMapReady, route }: Props) {
+export default function Map({ stations, onStationClick, onMapReady, route, suggestedStops = [] }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const stationsRef = useRef<NobilStation[]>([]);
@@ -141,10 +144,32 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
         },
       });
 
+      // ── Suggested stop markers (algorithm result) ─────────────────────
+      // Rendered on top of regular station circles as amber dots.
+      map.addSource(SUGGESTED_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: SUGGESTED_LAYER_ID,
+        type: "circle",
+        source: SUGGESTED_SOURCE_ID,
+        paint: {
+          "circle-color": "#F59E0B",
+          "circle-radius": 10,
+          "circle-stroke-width": 2.5,
+          "circle-stroke-color": "#ffffff",
+          "circle-opacity": 1.0,
+        },
+      });
+
       map.on("mouseenter", CLUSTER_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", CLUSTER_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
       map.on("mouseenter", UNCLUSTERED_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", UNCLUSTERED_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", SUGGESTED_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", SUGGESTED_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
     });
 
     mapRef.current = map;
@@ -183,13 +208,27 @@ export default function Map({ stations, onStationClick, onMapReady, route }: Pro
     const wire = () => {
       map.on("click", CLUSTER_LAYER_ID, handleClick);
       map.on("click", UNCLUSTERED_LAYER_ID, handleClick);
+      map.on("click", SUGGESTED_LAYER_ID, handleClick);
     };
     if (map.isStyleLoaded()) wire(); else map.on("load", wire);
     return () => {
       map.off("click", CLUSTER_LAYER_ID, handleClick);
       map.off("click", UNCLUSTERED_LAYER_ID, handleClick);
+      map.off("click", SUGGESTED_LAYER_ID, handleClick);
     };
   }, [handleClick]);
+
+  // ── Suggested stop markers ───────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const update = () => {
+      const src = map.getSource(SUGGESTED_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (src) src.setData(stationsToGeoJSON(suggestedStops));
+    };
+    if (map.isStyleLoaded()) update(); else map.once("idle", update);
+    return () => { map.off("idle", update); };
+  }, [suggestedStops]);
 
   // ── Route data ───────────────────────────────────────────────────────────
   // Remove-and-recreate on every route change so MapLibre reliably renders

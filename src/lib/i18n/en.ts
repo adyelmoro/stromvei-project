@@ -84,7 +84,9 @@ const en: Translations = {
     stopConnectors: (types: string) => `Available: ${types}`,
     clearRoute: "Clear route",
     errorNoStation:
-      "No charging station found in range. Try increasing your range or lowering your minimum charge.",
+      "No charging station along the route is within range. Try increasing your car range.",
+    errorDestUnreachable:
+      "Can't reach the destination — no station covers the final stretch. Try increasing your range.",
     errorNoRoute:
       "Could not find a route between these places. Check the place names and try again.",
   },
