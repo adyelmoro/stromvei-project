@@ -143,4 +143,82 @@ export const MOCK_STATIONS: NobilStation[] = [
     ],
     network: "Tesla", openingHours: null, totalConnectors: 6,
   },
+
+  // ── Oslo–Bergen corridor (E16 / Rv7) ─────────────────────────────────────
+  // These stations enable the route planner algorithm to show real results on
+  // the demo route. Coordinates are on or within 5 km of the OSRM route.
+  {
+    id: "NOR_00013",
+    name: "Circle K Hønefoss",
+    position: { lat: 60.1676, lng: 10.2530 },
+    address: { street: "Storgata 12", city: "Hønefoss", postalCode: "3510", municipality: "Ringerike", county: "Viken" },
+    connectors: [
+      { id: "1", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "2", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "3", type: "CHAdeMO", speedKw: 50, speed: "fast", status: "available" },
+    ],
+    network: "Circle K", openingHours: null, totalConnectors: 3,
+  },
+  {
+    id: "NOR_00014",
+    name: "Recharge Nesbyen",
+    position: { lat: 60.5680, lng: 9.0970 },
+    address: { street: "Rv7 Nesbyen", city: "Nesbyen", postalCode: "3540", municipality: "Nesbyen", county: "Viken" },
+    connectors: [
+      { id: "1", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "2", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "3", type: "Type2", speedKw: 22, speed: "fast", status: "available" },
+    ],
+    network: "Recharge", openingHours: null, totalConnectors: 3,
+  },
+  {
+    id: "NOR_00015",
+    name: "IONITY Gol",
+    position: { lat: 60.7025, lng: 8.9483 },
+    address: { street: "Rv7 Gol", city: "Gol", postalCode: "3550", municipality: "Gol", county: "Viken" },
+    connectors: [
+      { id: "1", type: "CCS", speedKw: 350, speed: "rapid", status: "available" },
+      { id: "2", type: "CCS", speedKw: 350, speed: "rapid", status: "available" },
+      { id: "3", type: "CCS", speedKw: 350, speed: "rapid", status: "available" },
+      { id: "4", type: "CCS", speedKw: 350, speed: "rapid", status: "occupied" },
+    ],
+    network: "IONITY", openingHours: null, totalConnectors: 4,
+  },
+  {
+    id: "NOR_00016",
+    name: "Recharge Geilo",
+    position: { lat: 60.5311, lng: 8.1982 },
+    address: { street: "Rv7 Geilo", city: "Geilo", postalCode: "3580", municipality: "Hol", county: "Viken" },
+    connectors: [
+      { id: "1", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "2", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "3", type: "CHAdeMO", speedKw: 50, speed: "fast", status: "available" },
+      { id: "4", type: "Type2", speedKw: 22, speed: "fast", status: "available" },
+    ],
+    network: "Recharge", openingHours: null, totalConnectors: 4,
+  },
+  {
+    id: "NOR_00017",
+    name: "Fortum Eidfjord",
+    position: { lat: 60.4641, lng: 7.0729 },
+    address: { street: "Rv7 Eidfjord", city: "Eidfjord", postalCode: "5783", municipality: "Eidfjord", county: "Vestland" },
+    connectors: [
+      { id: "1", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "2", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+    ],
+    network: "Fortum", openingHours: null, totalConnectors: 2,
+  },
+  {
+    id: "NOR_00018",
+    name: "Recharge Voss",
+    position: { lat: 60.6277, lng: 6.4200 },
+    address: { street: "Vossavangen 20", city: "Voss", postalCode: "5700", municipality: "Voss", county: "Vestland" },
+    connectors: [
+      { id: "1", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "2", type: "CCS", speedKw: 150, speed: "rapid", status: "available" },
+      { id: "3", type: "CHAdeMO", speedKw: 50, speed: "fast", status: "available" },
+      { id: "4", type: "Type2", speedKw: 22, speed: "fast", status: "available" },
+    ],
+    network: "Recharge", openingHours: null, totalConnectors: 4,
+  },
 ];
