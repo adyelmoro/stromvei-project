@@ -40,12 +40,13 @@ export default function StationDrawer({ station, onClose, saveState }: Props) {
 
       {/*
         Mobile  (< sm): full-width bottom sheet, slides up from bottom
-        Desktop (sm+):  floating card anchored to bottom-right, same slide animation
+        Desktop (sm+):  floating card anchored to bottom-left (consistent with
+                        filter and route planner panels)
       */}
       <div
         className={[
           "fixed bottom-0 left-0 right-0 rounded-t-2xl",
-          "sm:bottom-4 sm:right-4 sm:left-auto sm:w-96 sm:rounded-2xl",
+          "sm:bottom-4 sm:left-4 sm:right-auto sm:w-96 sm:rounded-2xl",
           "bg-[#0D1527] border border-white/10 shadow-2xl",
           "transition-transform duration-300 ease-in-out",
           station ? "translate-y-0" : "translate-y-[110%]",

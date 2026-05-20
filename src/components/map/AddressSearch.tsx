@@ -52,6 +52,8 @@ export default function AddressSearch({ placeholder, value, onChange, onSelect, 
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Prevents the debounced search from re-firing right after the user picks a suggestion
+  const justSelectedRef = useRef(false);
 
   const search = useCallback(async (query: string) => {
     setLoading(true);
@@ -77,9 +79,11 @@ export default function AddressSearch({ placeholder, value, onChange, onSelect, 
     }
   }, []);
 
-  // Debounced lookup — fires 300 ms after the user stops typing
+  // Debounced lookup — fires 300 ms after the user stops typing.
+  // Skip if the value was just set by handleSelect (no need to re-search the selected text).
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (justSelectedRef.current) { justSelectedRef.current = false; return; }
     if (value.length < 2) { setResults([]); setIsOpen(false); return; }
     debounceRef.current = setTimeout(() => { void search(value); }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -87,9 +91,11 @@ export default function AddressSearch({ placeholder, value, onChange, onSelect, 
 
   const handleSelect = useCallback(
     (result: AddressResult) => {
+      justSelectedRef.current = true; // suppress the debounce search that would follow
       onChange(result.displayName);
       onSelect(result);
       setIsOpen(false);
+      setResults([]);
       setHighlightedIndex(-1);
       inputRef.current?.blur();
     },
