@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   title: "StrømVei — Ladekart og ruteplanlegger for Norge",
   description:
     "Finn ladestasjoner og planlegg ruten din. Over 10 000 stasjoner i hele Norge.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
   openGraph: {
     title: "StrømVei — Norway's EV charging map and route planner",
     description:
