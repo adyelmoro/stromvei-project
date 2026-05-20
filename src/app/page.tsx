@@ -98,10 +98,8 @@ export default function HomePage() {
     }
   }, []);
 
-  // Close filter/route panels when a station is opened
+  // Station click: open drawer — filter/route panels stay open on desktop (different corners)
   const handleStationClick = useCallback((station: NobilStation) => {
-    setFilterOpen(false);
-    setRoutePlannerOpen(false);
     setSelectedStation(station);
   }, []);
 
