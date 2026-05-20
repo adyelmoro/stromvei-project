@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.svg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "StrømVei — EV charging map and route planner for Norway",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     title: "StrømVei — Norway's EV charging map and route planner",
     description:
       "Find charging stations and plan your route. Over 10,000 stations across Norway.",
-    images: ["/og-image.svg"],
+    images: ["/og-image.png"],
   },
 };
 
