@@ -24,7 +24,7 @@ export default function SavedPage() {
     return (
       <div className="min-h-screen bg-brand-dark text-white pb-24 sm:pb-0 flex flex-col">
         {/* Top bar */}
-        <header className="flex items-center justify-between px-5 py-4 border-b border-white/10 flex-shrink-0">
+        <header className="flex items-center justify-between px-5 pt-safe-4 pb-4 border-b border-white/10 flex-shrink-0">
           <Link href="/" className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m15 18-6-6 6-6" />
@@ -69,7 +69,7 @@ export default function SavedPage() {
   return (
     <div className="min-h-screen bg-brand-dark text-white pb-24 sm:pb-0">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+      <header className="flex items-center justify-between px-5 pt-safe-4 pb-4 border-b border-white/10">
         <Link
           href="/"
           className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"

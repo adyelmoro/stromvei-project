@@ -18,8 +18,16 @@
    Use pb-safe on any fixed element near the bottom edge (home indicator).
 */
 @layer utilities {
+  /* Positions a fixed element just below the iOS notch/status-bar.
+     Uses max() so on desktop/Android (inset=0) it falls back to 1rem,
+     and on iPhone it sits flush with the safe-area edge (no extra gap). */
   .top-safe-4 {
-    top: calc(env(safe-area-inset-top, 0px) + 1rem);
+    top: max(env(safe-area-inset-top, 0px), 1rem);
+  }
+  /* Padding-top equivalent — use on page <header> elements in place of pt-4
+     so they clear the notch on iOS PWA without overlapping. */
+  .pt-safe-4 {
+    padding-top: max(env(safe-area-inset-top, 0px), 1rem);
   }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);

@@ -10,7 +10,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-brand-dark text-white pb-24 sm:pb-8">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+      <header className="flex items-center justify-between px-5 pt-safe-4 pb-4 border-b border-white/10">
         <Link
           href="/"
           className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"
