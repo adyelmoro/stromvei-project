@@ -148,6 +148,18 @@ export default function HomePage() {
         suggestedStops={suggestedStops}
       />
 
+      {/* ── iOS notch backdrop ──────────────────────────────────────────────
+          The map renders from top:0 so tiles show through the translucent
+          status bar — looks different from Lagret/Om which have a dark
+          bg-brand-dark header filling that zone. This overlay fills exactly
+          env(safe-area-inset-top) with the same dark colour.
+          Height collapses to 0 on Android/desktop where inset = 0.
+      */}
+      <div
+        className="fixed top-0 left-0 right-0 bg-[#0A0E1A]"
+        style={{ height: "env(safe-area-inset-top, 0px)", zIndex: 5 }}
+      />
+
       {/* ── MOBILE top bar ───────────────────────────────────────────────────
           Single flush row: [Filter] [Postnummer──flex-1] [NO|EN] [Auth] [Logo]
           Hidden on sm+ where we use the two-column desktop layout below.
