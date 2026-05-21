@@ -1,0 +1,49 @@
+import type { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "StrømVei",
+    short_name: "StrømVei",
+    description: "Ladekart og ruteplanlegger for elbil i Norge",
+    start_url: "/",
+    display: "standalone",
+    orientation: "portrait-primary",
+    background_color: "#0A0E1A",
+    theme_color: "#0A0E1A",
+    lang: "no",
+    categories: ["maps", "navigation", "travel"],
+    icons: [
+      {
+        src: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/maskable-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/icons/maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      // SVG fallback for browsers that support it
+      {
+        src: "/favicon.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "any",
+      },
+    ],
+  };
+}
