@@ -152,7 +152,7 @@ export default function HomePage() {
           Single flush row: [Filter] [Postnummer──flex-1] [NO|EN] [Auth] [Logo]
           Hidden on sm+ where we use the two-column desktop layout below.
       */}
-      <div className="sm:hidden fixed top-4 left-4 right-4 flex items-center gap-1.5" style={{ zIndex: 10 }}>
+      <div className="sm:hidden fixed top-safe-4 left-4 right-4 flex items-center gap-1.5" style={{ zIndex: 10 }}>
         {/* Filter — icon + optional badge, square pill */}
         <button
           onClick={handleFilterToggle}
@@ -196,7 +196,7 @@ export default function HomePage() {
       {/* ── DESKTOP left column ──────────────────────────────────────────────
           Stacked: [count + filter + route] then [postcode] — hidden on mobile.
       */}
-      <div className="hidden sm:flex fixed top-4 left-4 flex-col gap-2" style={{ zIndex: 10 }}>
+      <div className="hidden sm:flex fixed top-safe-4 left-4 flex-col gap-2" style={{ zIndex: 10 }}>
         {!loading && !error && (
           <div className="flex items-center gap-2">
             <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-1.5">
@@ -256,7 +256,7 @@ export default function HomePage() {
       {/* ── DESKTOP right row ────────────────────────────────────────────────
           Hidden on mobile.
       */}
-      <div className="hidden sm:flex fixed top-4 right-4 items-center gap-2" style={{ zIndex: 10 }}>
+      <div className="hidden sm:flex fixed top-safe-4 right-4 items-center gap-2" style={{ zIndex: 10 }}>
         <LanguageToggle />
         <AuthButton />
         <div className="bg-brand-dark/80 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2">

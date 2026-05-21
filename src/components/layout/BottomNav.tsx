@@ -66,7 +66,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 sm:hidden bg-[#0D1527]/95 backdrop-blur-md border-t border-white/10"
+      className="fixed bottom-0 left-0 right-0 sm:hidden bg-[#0D1527]/95 backdrop-blur-md border-t border-white/10 pb-safe"
       style={{ zIndex: 35 }}
       aria-label="Navigasjon"
     >
@@ -121,8 +121,6 @@ export default function BottomNav() {
           <span className="text-[10px] font-medium leading-none">{t.nav.routeShort}</span>
         </button>
       </div>
-      {/* Safe area padding for phones with home indicator */}
-      <div className="h-safe-area-inset-bottom" />
     </nav>
   );
 }

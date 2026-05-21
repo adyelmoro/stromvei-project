@@ -11,6 +11,21 @@
   --brand-yellow: #FFD700;
 }
 
+/* ── iOS PWA safe-area utilities ─────────────────────────────────────────────
+   env(safe-area-inset-*) is populated by iOS in standalone mode when
+   viewport-fit=cover is set. Falls back to 0px on Android and desktop.
+   Use top-safe-4 instead of top-4 on any fixed element near the top edge.
+   Use pb-safe on any fixed element near the bottom edge (home indicator).
+*/
+@layer utilities {
+  .top-safe-4 {
+    top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
 html,
 body {
   height: 100%;
