@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { RoutePlannerProvider } from "@/lib/route-planner-context";
 import BottomNav from "@/components/layout/BottomNav";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import IOSInstallBanner from "@/components/IOSInstallBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -80,6 +81,7 @@ export default function RootLayout({
             </RoutePlannerProvider>
           </I18nProvider>
         </AuthProvider>
+        <IOSInstallBanner />
         <ServiceWorkerRegistration />
       </body>
     </html>
