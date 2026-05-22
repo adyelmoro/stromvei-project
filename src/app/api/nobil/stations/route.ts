@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { fetchAllStations } from "@/lib/nobil";
 import { MOCK_STATIONS } from "@/lib/mock-stations";
 
+// Cache the response at Vercel's CDN for 15 min so cold-start serverless
+// invocations don't re-fetch 5 000+ stations from nobil.no each time.
+export const revalidate = 900;
+
 export async function GET() {
   const apiKey = process.env.NOBIL_API_KEY;
 

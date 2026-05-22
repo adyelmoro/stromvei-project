@@ -146,6 +146,44 @@ export default function RoutePlannerPanel({
     onRouteClear();
   }, [onRouteClear]);
 
+  // Swap origin ↔ destination. If a route is already active, clears it and
+  // immediately re-fetches in reverse so the user sees the result right away.
+  const handleSwap = useCallback(async () => {
+    const newOriginText   = destText;
+    const newDestText     = originText;
+    const newOriginCoords = destCoords;
+    const newDestCoords   = originCoords;
+
+    setOriginText(newOriginText);
+    setDestText(newDestText);
+    setOriginCoords(newOriginCoords);
+    setDestCoords(newDestCoords);
+    setError(null);
+
+    if (activeRoute && newOriginCoords && newDestCoords) {
+      onRouteClear();
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          originLat: String(newOriginCoords.lat),
+          originLon: String(newOriginCoords.lon),
+          destLat:   String(newDestCoords.lat),
+          destLon:   String(newDestCoords.lon),
+        });
+        const res = await fetch(`/api/route?${params.toString()}`);
+        if (!res.ok) { setError(t.routePlanner.errorNoRoute); return; }
+        const data = (await res.json()) as {
+          route: Feature<LineString>; distanceKm: number; durationMin: number;
+        };
+        onRouteReady({ geojson: data.route, distanceKm: data.distanceKm, durationMin: data.durationMin });
+      } catch {
+        setError(t.routePlanner.errorNoRoute);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [originText, destText, originCoords, destCoords, activeRoute, onRouteClear, onRouteReady, t]);
+
   const canSubmit = !!originCoords && !!destCoords && !loading;
 
   const content = (
@@ -180,6 +218,26 @@ export default function RoutePlannerPanel({
                 {originText || "—"} → {destText || "—"}
               </p>
             </div>
+            {/* Reverse route — swaps origin/dest and recalculates immediately */}
+            <button
+              type="button"
+              onClick={() => void handleSwap()}
+              title="Reverser ruten"
+              disabled={loading}
+              className="p-1.5 rounded-lg text-white/40 hover:text-brand-blue hover:bg-white/10 transition-colors flex-shrink-0 disabled:opacity-30"
+            >
+              {loading ? (
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 16V4m0 0L3 8m4-4 4 4" />
+                  <path d="M17 8v12m0 0 4-4m-4 4-4-4" />
+                </svg>
+              )}
+            </button>
           </div>
 
           {/* Algorithm result */}
@@ -234,40 +292,56 @@ export default function RoutePlannerPanel({
       ) : (
         /* ── Form state ── */
         <div className="flex flex-col gap-2.5">
-          {/* Origin */}
-          <div>
-            <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1">
-              {t.routePlanner.originLabel}
-            </label>
-            <AddressSearch
-              placeholder={t.routePlanner.originPlaceholder}
-              value={originText}
-              onChange={(text) => {
-                setOriginText(text);
-                if (!text) setOriginCoords(null);
-              }}
-              onSelect={handleOriginSelect}
-              onClear={() => setOriginCoords(null)}
-              dropUp
-            />
-          </div>
+          {/* Origin + swap + destination stacked with a connector line */}
+          <div className="relative flex flex-col gap-0">
+            <div>
+              <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1">
+                {t.routePlanner.originLabel}
+              </label>
+              <AddressSearch
+                placeholder={t.routePlanner.originPlaceholder}
+                value={originText}
+                onChange={(text) => {
+                  setOriginText(text);
+                  if (!text) setOriginCoords(null);
+                }}
+                onSelect={handleOriginSelect}
+                onClear={() => setOriginCoords(null)}
+                dropUp
+              />
+            </div>
 
-          {/* Destination */}
-          <div>
-            <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1">
-              {t.routePlanner.destinationLabel}
-            </label>
-            <AddressSearch
-              placeholder={t.routePlanner.destinationPlaceholder}
-              value={destText}
-              onChange={(text) => {
-                setDestText(text);
-                if (!text) setDestCoords(null);
-              }}
-              onSelect={handleDestSelect}
-              onClear={() => setDestCoords(null)}
-              dropUp
-            />
+            {/* Swap button — centred between the two fields */}
+            <div className="flex items-center justify-end py-1 pr-1">
+              <button
+                type="button"
+                onClick={() => void handleSwap()}
+                title="Bytt fra og til"
+                className="p-1.5 rounded-lg text-white/30 hover:text-brand-blue hover:bg-white/5 transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 16V4m0 0L3 8m4-4 4 4" />
+                  <path d="M17 8v12m0 0 4-4m-4 4-4-4" />
+                </svg>
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-white/40 text-[11px] font-medium uppercase tracking-wide mb-1">
+                {t.routePlanner.destinationLabel}
+              </label>
+              <AddressSearch
+                placeholder={t.routePlanner.destinationPlaceholder}
+                value={destText}
+                onChange={(text) => {
+                  setDestText(text);
+                  if (!text) setDestCoords(null);
+                }}
+                onSelect={handleDestSelect}
+                onClear={() => setDestCoords(null)}
+                dropUp
+              />
+            </div>
           </div>
 
           {/* Range */}

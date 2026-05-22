@@ -79,7 +79,7 @@ export default function HomePage() {
   const displayedStations = useMemo(
     () =>
       simplifiedRoute
-        ? filterStationsAlongRoute(filtered, simplifiedRoute)
+        ? filterStationsAlongRoute(filtered, simplifiedRoute, 10)
         : filtered,
     [filtered, simplifiedRoute]
   );
@@ -90,7 +90,7 @@ export default function HomePage() {
     const rangeNum = parseFloat(rangeKm);
     const minNum = parseFloat(minChargePct);
     if (isNaN(rangeNum) || rangeNum <= 0 || isNaN(minNum)) return null;
-    return planChargingStops(simplifiedRoute, displayedStations, rangeNum, minNum);
+    return planChargingStops(simplifiedRoute, displayedStations, rangeNum, minNum, 10);
   }, [simplifiedRoute, displayedStations, rangeKm, minChargePct]);
 
   // Stations selected by the algorithm — rendered as distinct orange markers on the map
@@ -153,6 +153,7 @@ export default function HomePage() {
 
   const handleRouteClear = useCallback(() => {
     setActiveRoute(null);
+    setSelectedStation(null);
   }, []);
 
   return (
