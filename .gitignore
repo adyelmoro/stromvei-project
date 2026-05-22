@@ -38,6 +38,11 @@ supabasepassword.txt
 # vercel
 .vercel
 
+# claude code — local session files, never commit
+.claude/
+CLAUDE.md
+pnpm-workspace.yaml
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
