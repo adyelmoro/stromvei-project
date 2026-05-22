@@ -42,6 +42,7 @@ supabasepassword.txt
 .claude/
 CLAUDE.md
 pnpm-workspace.yaml
+pnpm-lock.yaml
 
 # typescript
 *.tsbuildinfo
