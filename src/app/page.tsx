@@ -16,6 +16,8 @@ import AuthButton from "@/components/auth/AuthButton";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRoutePlanner } from "@/lib/route-planner-context";
+import { simplify } from "@turf/turf";
+import type { Feature, LineString } from "geojson";
 import { filterStationsAlongRoute } from "@/lib/route-filter";
 import { planChargingStops } from "@/lib/route-planner";
 import type { RoutePlanResult } from "@/lib/route-planner";
@@ -57,23 +59,39 @@ export default function HomePage() {
   const [rangeKm, setRangeKm] = useState("400");
   const [minChargePct, setMinChargePct] = useState("20");
 
+  // Simplify the OSRM route geometry once — 0.005° ≈ 550 m tolerance is well
+  // under the 5 km corridor, so proximity is still accurate but nearestPointOnLine
+  // iterates ~50–100 segments instead of 3 000–8 000.
+  const simplifiedRoute = useMemo((): Feature<LineString> | null => {
+    if (!activeRoute) return null;
+    try {
+      return simplify(activeRoute.geojson as Feature<LineString>, {
+        tolerance: 0.005,
+        highQuality: false,
+        mutate: false,
+      }) as Feature<LineString>;
+    } catch {
+      return activeRoute.geojson as Feature<LineString>;
+    }
+  }, [activeRoute]);
+
   // When a route is active, narrow displayed stations to the 5 km corridor
   const displayedStations = useMemo(
     () =>
-      activeRoute
-        ? filterStationsAlongRoute(filtered, activeRoute.geojson)
+      simplifiedRoute
+        ? filterStationsAlongRoute(filtered, simplifiedRoute)
         : filtered,
-    [filtered, activeRoute]
+    [filtered, simplifiedRoute]
   );
 
   // Run the greedy algorithm whenever route, corridor stations, or EV settings change
   const planResult = useMemo((): RoutePlanResult | null => {
-    if (!activeRoute) return null;
+    if (!simplifiedRoute) return null;
     const rangeNum = parseFloat(rangeKm);
     const minNum = parseFloat(minChargePct);
     if (isNaN(rangeNum) || rangeNum <= 0 || isNaN(minNum)) return null;
-    return planChargingStops(activeRoute.geojson, displayedStations, rangeNum, minNum);
-  }, [activeRoute, displayedStations, rangeKm, minChargePct]);
+    return planChargingStops(simplifiedRoute, displayedStations, rangeNum, minNum);
+  }, [simplifiedRoute, displayedStations, rangeKm, minChargePct]);
 
   // Stations selected by the algorithm — rendered as distinct orange markers on the map
   const suggestedStops = useMemo(
