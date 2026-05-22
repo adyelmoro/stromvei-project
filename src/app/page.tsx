@@ -66,7 +66,7 @@ export default function HomePage() {
     if (!activeRoute) return null;
     try {
       return simplify(activeRoute.geojson as Feature<LineString>, {
-        tolerance: 0.005,
+        tolerance: 0.001,
         highQuality: false,
         mutate: false,
       }) as Feature<LineString>;
@@ -161,9 +161,11 @@ export default function HomePage() {
       <Map
         stations={displayedStations}
         onStationClick={handleStationClick}
+        onMapBackgroundClick={() => setSelectedStation(null)}
         onMapReady={handleMapReady}
         route={activeRoute?.geojson ?? null}
         suggestedStops={suggestedStops}
+        selectedStationId={selectedStation?.id ?? null}
       />
 
       {/* ── iOS notch backdrop ──────────────────────────────────────────────

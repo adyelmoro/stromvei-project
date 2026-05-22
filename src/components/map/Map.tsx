@@ -17,40 +17,62 @@ const ROUTE_CASING_LAYER_ID = "route-line-casing";
 const ROUTE_LINE_LAYER_ID = "route-line";
 const SUGGESTED_SOURCE_ID = "suggested-stops";
 const SUGGESTED_LAYER_ID = "suggested-stop-point";
+const SELECTED_SOURCE_ID = "selected-station";
+const SELECTED_LAYER_ID = "selected-station-point";
 
 type Props = {
   stations: NobilStation[];
   onStationClick: (station: NobilStation) => void;
+  onMapBackgroundClick?: () => void;
   onMapReady?: (map: maplibregl.Map) => void;
   route?: Feature<LineString> | null;
   suggestedStops?: NobilStation[];
+  selectedStationId?: string | null;
 };
 
-export default function Map({ stations, onStationClick, onMapReady, route, suggestedStops = [] }: Props) {
+export default function Map({ stations, onStationClick, onMapBackgroundClick, onMapReady, route, suggestedStops = [], selectedStationId = null }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const stationsRef = useRef<NobilStation[]>([]);
   stationsRef.current = stations;
+  // Keep latest callback in a ref so the stable handleMapClick doesn't go stale
+  const onMapBackgroundClickRef = useRef(onMapBackgroundClick);
+  onMapBackgroundClickRef.current = onMapBackgroundClick;
 
-  const handleClick = useCallback(
-    (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
-      const features = e.features;
-      if (!features?.length) return;
-      const props = features[0].properties;
-      if (!props) return;
+  // Single unified map click handler:
+  //  • cluster click  → zoom in
+  //  • station click  → open drawer
+  //  • empty map click → close drawer
+  const handleMapClick = useCallback(
+    (e: maplibregl.MapMouseEvent) => {
+      const map = mapRef.current;
+      if (!map) return;
 
-      if (props.cluster) {
-        const source = mapRef.current?.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
-        if (!source || !mapRef.current) return;
-        const coords = (features[0].geometry as GeoJSON.Point).coordinates as [number, number];
-        source.getClusterExpansionZoom(props.cluster_id)
-          .then((zoom) => { mapRef.current?.easeTo({ center: coords, zoom: zoom ?? 12 }); })
-          .catch(() => { mapRef.current?.easeTo({ center: coords, zoom: 12 }); });
+      // 1. Cluster?
+      const clusterFeatures = map.queryRenderedFeatures(e.point, { layers: [CLUSTER_LAYER_ID] });
+      if (clusterFeatures.length) {
+        const props = clusterFeatures[0].properties;
+        const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
+        const coords = (clusterFeatures[0].geometry as GeoJSON.Point).coordinates as [number, number];
+        source.getClusterExpansionZoom(props?.cluster_id)
+          .then((zoom) => { map.easeTo({ center: coords, zoom: zoom ?? 12 }); })
+          .catch(() => { map.easeTo({ center: coords, zoom: 12 }); });
         return;
       }
 
-      const station = stationsRef.current.find((s) => s.id === props.id);
-      if (station) onStationClick(station);
+      // 2. Individual station or suggested stop?
+      const stationFeatures = map.queryRenderedFeatures(e.point, {
+        layers: [UNCLUSTERED_LAYER_ID, SUGGESTED_LAYER_ID, SELECTED_LAYER_ID],
+      });
+      if (stationFeatures.length) {
+        const props = stationFeatures[0].properties;
+        const station = stationsRef.current.find((s) => s.id === props?.id);
+        if (station) onStationClick(station);
+        return;
+      }
+
+      // 3. Empty map → close drawer
+      onMapBackgroundClickRef.current?.();
     },
     [onStationClick]
   );
@@ -164,12 +186,35 @@ export default function Map({ stations, onStationClick, onMapReady, route, sugge
         },
       });
 
-      map.on("mouseenter", CLUSTER_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", CLUSTER_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+      // ── Selected station highlight ─────────────────────────────────────
+      // Rendered on top of everything: white fill + blue ring so the open
+      // drawer's station is unambiguously visible regardless of its speed tier.
+      map.addSource(SELECTED_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: SELECTED_LAYER_ID,
+        type: "circle",
+        source: SELECTED_SOURCE_ID,
+        paint: {
+          "circle-color": "#ffffff",
+          "circle-radius": 11,
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#0066FF",
+          "circle-opacity": 1.0,
+        },
+      });
+
+      map.on("mouseenter", CLUSTER_LAYER_ID,    () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", CLUSTER_LAYER_ID,    () => { map.getCanvas().style.cursor = ""; });
       map.on("mouseenter", UNCLUSTERED_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", UNCLUSTERED_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
-      map.on("mouseenter", SUGGESTED_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", SUGGESTED_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", SUGGESTED_LAYER_ID,  () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", SUGGESTED_LAYER_ID,  () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", SELECTED_LAYER_ID,   () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", SELECTED_LAYER_ID,   () => { map.getCanvas().style.cursor = ""; });
     });
 
     mapRef.current = map;
@@ -205,18 +250,10 @@ export default function Map({ stations, onStationClick, onMapReady, route, sugge
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const wire = () => {
-      map.on("click", CLUSTER_LAYER_ID, handleClick);
-      map.on("click", UNCLUSTERED_LAYER_ID, handleClick);
-      map.on("click", SUGGESTED_LAYER_ID, handleClick);
-    };
+    const wire = () => { map.on("click", handleMapClick); };
     if (map.isStyleLoaded()) wire(); else map.on("load", wire);
-    return () => {
-      map.off("click", CLUSTER_LAYER_ID, handleClick);
-      map.off("click", UNCLUSTERED_LAYER_ID, handleClick);
-      map.off("click", SUGGESTED_LAYER_ID, handleClick);
-    };
-  }, [handleClick]);
+    return () => { map.off("click", handleMapClick); };
+  }, [handleMapClick]);
 
   // ── Suggested stop markers ───────────────────────────────────────────────
   useEffect(() => {
@@ -229,6 +266,35 @@ export default function Map({ stations, onStationClick, onMapReady, route, sugge
     if (map.isStyleLoaded()) update(); else map.once("idle", update);
     return () => { map.off("idle", update); };
   }, [suggestedStops]);
+
+  // ── Selected station highlight ───────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const update = () => {
+      const src = map.getSource(SELECTED_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (!src) return;
+      if (!selectedStationId) {
+        src.setData({ type: "FeatureCollection", features: [] });
+        return;
+      }
+      const station = stationsRef.current.find((s) => s.id === selectedStationId);
+      if (!station) {
+        src.setData({ type: "FeatureCollection", features: [] });
+        return;
+      }
+      src.setData({
+        type: "FeatureCollection",
+        features: [{
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [station.position.lng, station.position.lat] },
+          properties: { id: station.id },
+        }],
+      });
+    };
+    if (map.isStyleLoaded()) update(); else map.once("idle", update);
+    return () => { map.off("idle", update); };
+  }, [selectedStationId]);
 
   // ── Route data ───────────────────────────────────────────────────────────
   // Remove-and-recreate on every route change so MapLibre reliably renders
