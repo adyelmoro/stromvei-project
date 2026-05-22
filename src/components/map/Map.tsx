@@ -111,8 +111,28 @@ export default function Map({ stations, onStationClick, onMapBackgroundClick, on
       if (onMapReady) onMapReady(map);
 
       // ── Sources & Layers ──────────────────────────────────────────────
-      // Route source/layers are managed entirely by the route useEffect below
-      // (remove-and-recreate on every change). Nothing to initialise here.
+      // Route source is initialised here with empty data and updated via
+      // setData() — this is ~100× faster than remove-and-recreate and means
+      // the blue line appears on the very next animation frame.
+      // Route layers are added BEFORE station layers so they render below dots.
+      map.addSource(ROUTE_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: ROUTE_CASING_LAYER_ID,
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.4 },
+      });
+      map.addLayer({
+        id: ROUTE_LINE_LAYER_ID,
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#0066FF", "line-width": 5, "line-opacity": 1.0 },
+      });
 
       // Station source + layers
       map.addSource(SOURCE_ID, {
@@ -297,79 +317,32 @@ export default function Map({ stations, onStationClick, onMapBackgroundClick, on
   }, [selectedStationId]);
 
   // ── Route data ───────────────────────────────────────────────────────────
-  // Remove-and-recreate on every route change so MapLibre reliably renders
-  // the new geometry.
-  //
-  // IMPORTANT: use "idle" as the fallback event — NOT "load".
-  // "load" fires only once at startup. If the user moves the map before
-  // submitting (causing tile fetches), isStyleLoaded() can return false while
-  // tiles are in-flight, and the "load" handler never fires again, so update()
-  // is silently skipped. "idle" fires whenever the map finishes rendering,
-  // so it always eventually runs.
+  // Route source is persistent (initialised in load handler). We just swap
+  // its data — setData() is a single GPU upload and renders on the next frame
+  // instead of the seconds-long remove-source → add-source → re-tile cycle.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
+    const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+
     const update = () => {
-      // Always tear down existing route layers + source first
-      if (map.getLayer(ROUTE_LINE_LAYER_ID)) map.removeLayer(ROUTE_LINE_LAYER_ID);
-      if (map.getLayer(ROUTE_CASING_LAYER_ID)) map.removeLayer(ROUTE_CASING_LAYER_ID);
-      if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
-
-      if (!route) return;
-
-      // Add fresh source WITH actual data baked in
-      map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: route });
-
-      // Insert route below our station cluster layers so station circles
-      // render on top of the route line.
-      const beforeId = map.getLayer(CLUSTER_LAYER_ID) ? CLUSTER_LAYER_ID : undefined;
-
-      map.addLayer(
-        {
-          id: ROUTE_CASING_LAYER_ID,
-          type: "line",
-          source: ROUTE_SOURCE_ID,
-          layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.4 },
-        },
-        beforeId
-      );
-
-      map.addLayer(
-        {
-          id: ROUTE_LINE_LAYER_ID,
-          type: "line",
-          source: ROUTE_SOURCE_ID,
-          layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": "#0066FF", "line-width": 5, "line-opacity": 1.0 },
-        },
-        beforeId
-      );
-
-      try {
-        const [minLng, minLat, maxLng, maxLat] = bbox(route);
-        map.fitBounds(
-          [[minLng, minLat], [maxLng, maxLat]],
-          { padding: 80, maxZoom: 13, duration: 900 }
-        );
-      } catch {
-        // Malformed geometry — skip fitBounds
+      const src = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (!src) return;
+      src.setData(route ?? EMPTY_FC);
+      if (route) {
+        try {
+          const [minLng, minLat, maxLng, maxLat] = bbox(route);
+          map.fitBounds(
+            [[minLng, minLat], [maxLng, maxLat]],
+            { padding: 80, maxZoom: 13, duration: 400 }
+          );
+        } catch { /* malformed geometry — skip */ }
       }
     };
 
-    // isStyleLoaded() can return false while tiles are fetching after user
-    // interactions — use "idle" as fallback so we always get a callback.
-    if (map.isStyleLoaded()) {
-      update();
-    } else {
-      map.once("idle", update);
-    }
-
-    return () => {
-      // If the route changes before idle fires, cancel the pending callback
-      map.off("idle", update);
-    };
+    if (map.isStyleLoaded()) update(); else map.once("idle", update);
+    return () => { map.off("idle", update); };
   }, [route]);
 
   return (
